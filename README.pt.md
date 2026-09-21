@@ -21,13 +21,16 @@ python manage.py runserver 8766
 
 Abra `http://127.0.0.1:8766/`. A administração técnica está disponível em `/admin/`. Crie o primeiro administrador com `python manage.py createsuperuser`.
 
+As definições locais são carregadas a partir de `.env`. O ficheiro de desenvolvimento fornecido utiliza `DJANGO_ALLOWED_HOSTS=*`; copie `.env.example` ao preparar outro ambiente. Reinicie o servidor Django após alterar variáveis de ambiente.
+
 Para importar ou atualizar um ficheiro XLSX:
 
 ```powershell
 python manage.py import_inventory --source "C:\caminho\para\inventario.xlsx"
+python manage.py import_sds_links --source "C:\caminho\para\inventario.xlsx"
 ```
 
-O comando é idempotente para o mesmo checksum do ficheiro. O PostgreSQL é ativado quando são definidas as variáveis `POSTGRES_*` apresentadas em `.env.example`; caso contrário, o desenvolvimento local utiliza SQLite.
+O primeiro comando importa as linhas do inventário e é idempotente para o mesmo checksum. O segundo lê as hiperligações incorporadas nas células do Excel e associa os URLs reais das FDS aos reagentes importados. O PostgreSQL é ativado quando são definidas as variáveis `POSTGRES_*` apresentadas em `.env.example`; caso contrário, o desenvolvimento local utiliza SQLite.
 
 ## Testes e lint
 

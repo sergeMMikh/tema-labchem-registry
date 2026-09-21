@@ -1,0 +1,8 @@
+.muted {
+  color: var(--muted);
+}
+
+.sds-link {
+  font-weight: 700;
+  white-space: nowrap;
+}

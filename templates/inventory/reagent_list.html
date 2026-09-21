@@ -15,11 +15,11 @@
 <section class="table-card" aria-live="polite">
   {% if page_obj.object_list %}
   <div class="table-scroll"><table>
-    <thead><tr><th><a href="?q={{ q|urlencode }}&status={{ selected_status }}&location={{ selected_location }}&ordering={% if ordering == 'name' %}-name{% else %}name{% endif %}">{% translate "Reagent" %}</a></th><th>CAS</th><th>{% translate "Quantity remaining" %}</th><th>{% translate "Location" %}</th><th>{% translate "Expiration date" %}</th><th>{% translate "Status" %}</th><th><span class="sr-only">{% translate "Actions" %}</span></th></tr></thead>
+    <thead><tr><th><a href="?q={{ q|urlencode }}&status={{ selected_status }}&location={{ selected_location }}&ordering={% if ordering == 'name' %}-name{% else %}name{% endif %}">{% translate "Reagent" %}</a></th><th>CAS</th><th>{% translate "Quantity remaining" %}</th><th>{% translate "Location" %}</th><th>{% translate "Expiration date" %}</th><th>SDS</th><th>{% translate "Status" %}</th><th><span class="sr-only">{% translate "Actions" %}</span></th></tr></thead>
     <tbody>{% for reagent in page_obj %}{% with package=reagent.packages.all.0 %}
       <tr data-quick-url="{% url 'inventory:reagent-quick' reagent.pk %}" tabindex="0">
         <td><a class="reagent-name" href="{{ reagent.get_absolute_url }}">{{ reagent.name }}</a><small>{{ reagent.formula }}{% if reagent.supplier %} · {{ reagent.supplier }}{% endif %}</small></td>
-        <td>{{ reagent.cas_number|default:"—" }}</td><td>{{ package.display_quantity|default:"—" }}</td><td>{{ package.location.full_path|default:"—" }}</td><td>{{ package.expires_at|date:"SHORT_DATE_FORMAT"|default:"—" }}</td>
+        <td>{{ reagent.cas_number|default:"—" }}</td><td>{{ package.display_quantity|default:"—" }}</td><td>{{ package.location.full_path|default:"—" }}</td><td>{{ package.expires_at|date:"SHORT_DATE_FORMAT"|default:"—" }}</td><td>{% if reagent.sds_url %}<a class="sds-link" href="{{ reagent.sds_url }}" target="_blank" rel="noopener noreferrer" aria-label="{% translate 'Open safety document' %}: {{ reagent.name }}">SDS ↗</a>{% else %}<span class="muted" title="{% translate 'Missing SDS' %}">—</span>{% endif %}</td>
         <td><span class="status status-{{ package.status|default:'pending_review' }}">{{ package.get_status_display|default:_('Pending review') }}</span></td><td><button type="button" class="icon-button quick-open" aria-label="{% translate 'Open quick view' %}">›</button></td>
       </tr>{% endwith %}{% endfor %}</tbody>
   </table></div>

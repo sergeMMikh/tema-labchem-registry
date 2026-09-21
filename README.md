@@ -21,13 +21,16 @@ python manage.py runserver 8766
 
 Open `http://127.0.0.1:8766/`. The technical administration interface is available at `/admin/`. Create its first administrator with `python manage.py createsuperuser`.
 
+Local settings are loaded from `.env`. The supplied development file uses `DJANGO_ALLOWED_HOSTS=*`; copy `.env.example` when preparing another environment. Restart the Django server after changing environment variables.
+
 To import or refresh an XLSX workbook:
 
 ```powershell
 python manage.py import_inventory --source "C:\path\to\inventory.xlsx"
+python manage.py import_sds_links --source "C:\path\to\inventory.xlsx"
 ```
 
-The command is idempotent for the same workbook checksum. PostgreSQL is enabled when the `POSTGRES_*` environment variables shown in `.env.example` are set; otherwise local development uses SQLite.
+The first command imports inventory rows and is idempotent for the same workbook checksum. The second command reads hyperlinks embedded in Excel cells and associates the actual SDS URLs with imported reagents. PostgreSQL is enabled when the `POSTGRES_*` environment variables shown in `.env.example` are set; otherwise local development uses SQLite.
 
 ## Tests and lint
 

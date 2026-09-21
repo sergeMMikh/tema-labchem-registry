@@ -77,6 +77,11 @@ def test_pages_render(client, package, route):
     assert client.get(reverse(f"inventory:{route}")).status_code == 200
 
 
+def test_application_accepts_arbitrary_host(client, package):
+    response = client.get(reverse("inventory:reagent-list"), HTTP_HOST="192.168.10.25:8767")
+    assert response.status_code == 200
+
+
 @pytest.mark.parametrize("action", ["package-use", "package-move", "package-write-off"])
 def test_mutations_require_permission(client, django_user_model, package, action):
     user = django_user_model.objects.create_user(username="viewer")
@@ -118,6 +123,19 @@ def test_invalid_consumption_shows_form_error(client, admin_user, package):
 def test_search_api(client, package, query):
     response = client.get(reverse("inventory:api-reagent-list"), {"q": query})
     assert response.json()["results"][0]["id"] == str(package.reagent_id)
+
+
+def test_sds_link_is_visible_in_list_quick_view_and_detail(client, package):
+    package.reagent.sds_url = "https://example.test/acetone-sds.pdf"
+    package.reagent.save()
+    urls = [
+        reverse("inventory:reagent-list"),
+        reverse("inventory:reagent-quick", args=[package.reagent_id]),
+        reverse("inventory:reagent-detail", args=[package.reagent_id]),
+    ]
+    for url in urls:
+        response = client.get(url)
+        assert 'href="https://example.test/acetone-sds.pdf"' in response.content.decode()
 
 
 def test_filters_pagination_and_locations(client, package):
@@ -174,9 +192,10 @@ def test_import_is_idempotent_and_skips_old_snapshot(tmp_path):
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "Inventário Gases (agosto 2026)"
-    sheet.append(["Name", "CAS", "Quantity", "Supplier", "Storage"])
-    sheet.append(["Acetone", "67-64-1", "2.5 L", "Supplier", "Lab 3.2.7"])
-    sheet.append(["Unknown", "bad", "?", "Supplier", "Lab 3.2.7"])
+    sheet.append(["Name", "CAS", "Quantity", "Supplier", "Storage", "Link to SDS"])
+    sheet.append(["Acetone", "67-64-1", "2.5 L", "Supplier", "Lab 3.2.7", "Safety sheet"])
+    sheet["F2"].hyperlink = "https://example.test/acetone-sds.pdf"
+    sheet.append(["Unknown", "bad", "?", "Supplier", "Lab 3.2.7", ""])
     sheet.append(["Inventário", None, None, None, None])
     old = workbook.create_sheet("Inventário Gases (abril 2026)")
     old.append(["Name", "CAS"])
@@ -185,11 +204,13 @@ def test_import_is_idempotent_and_skips_old_snapshot(tmp_path):
     workbook.save(path)
     for _ in range(2):
         call_command("import_inventory", source=str(path), stdout=StringIO())
+    call_command("import_sds_links", source=str(path), stdout=StringIO())
     assert Package.objects.count() == 2
     assert StockMovement.objects.count() == 2
     batch = ImportBatch.objects.get()
     assert batch.imported_rows == 2
     assert len(batch.warnings) == 2
+    assert Reagent.objects.get(name="Acetone").sds_url == "https://example.test/acetone-sds.pdf"
 
 
 @pytest.mark.parametrize("raw,expected", [(" 67-64-1 ", "67-64-1"), ("67-64-2", ""), ("?", "")])
