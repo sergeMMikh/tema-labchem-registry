@@ -1,0 +1,52 @@
+{% load static i18n %}
+<!doctype html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TEMA Reagents{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/app.js' %}" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">{% translate "Skip to content" %}</a>
+  <header class="topbar">
+    <a class="brand" href="{% url 'inventory:reagent-list' %}" aria-label="TEMA Reagents">
+      <span class="brand-mark">TEMA</span><span><strong>TEMA Reagents</strong><small>Centre for Mechanical Technology and Automation</small></span>
+    </a>
+    <nav class="topnav" aria-label="{% translate 'Main navigation' %}">
+      <a href="{% url 'inventory:overview' %}">{% translate "Overview" %}</a>
+      <a href="{% url 'inventory:reagent-list' %}">{% translate "Reagents" %}</a>
+      <a href="{% url 'inventory:location-list' %}">{% translate "Locations" %}</a>
+      <a href="{% url 'inventory:attention-list' %}">{% translate "Require attention" %}</a>
+    </nav>
+    <div class="top-actions">
+      <form action="{% url 'set_language' %}" method="post" class="language-form">{% csrf_token %}
+        <input name="next" type="hidden" value="{{ request.get_full_path }}">
+        <button name="language" value="pt" class="lang {% if LANGUAGE_CODE == 'pt' %}active{% endif %}">PT</button>
+        <span aria-hidden="true">/</span>
+        <button name="language" value="en" class="lang {% if LANGUAGE_CODE == 'en' %}active{% endif %}">EN</button>
+      </form>
+      {% if user.is_authenticated %}<a href="{% url 'admin:index' %}" class="user-chip">{{ user.get_short_name|default:user.username }}</a>{% else %}<a href="{% url 'admin:login' %}?next={{ request.path }}">{% translate "Sign in" %}</a>{% endif %}
+    </div>
+  </header>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <p class="eyebrow">{% translate "Inventory" %}</p>
+      <a href="{% url 'inventory:reagent-list' %}">{% translate "All reagents" %}</a>
+      <a href="{% url 'inventory:reagent-list' %}?status=available">{% translate "Packages" %}</a>
+      <a href="{% url 'inventory:attention-list' %}">{% translate "Require attention" %}<span class="count">{{ attention_count }}</span></a>
+      <a href="{% url 'inventory:reagent-list' %}?status=written_off">{% translate "Written off" %}</a>
+      <p class="eyebrow">{% translate "Directories" %}</p>
+      <a href="{% url 'inventory:location-list' %}">{% translate "Locations" %}</a>
+      {% if user.is_staff %}<a href="{% url 'admin:index' %}">{% translate "Administration" %}</a>{% endif %}
+    </aside>
+    <main id="main" class="content" tabindex="-1">
+      {% for message in messages %}<div class="notice {{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
+  <aside id="quick-drawer" class="drawer" aria-label="{% translate 'Quick reagent view' %}" aria-hidden="true"></aside>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% translate "Reagents" %} · TEMA{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div><p class="eyebrow">TEMA Lab Inventory</p><h1>{% translate "Reagents" %}</h1><p>{% translate "Inventory, search and control of laboratory stocks" %}</p></div>
+  {% if perms.inventory.add_reagent %}<a class="button primary" href="{% url 'inventory:reagent-create' %}">+ {% translate "Add reagent" %}</a>{% endif %}
+</header>
+<form method="get" class="filter-panel" role="search">
+  <label class="search-field"><span class="sr-only">{% translate "Search" %}</span><input name="q" value="{{ q }}" placeholder="{% translate 'Name, formula, CAS, manufacturer or barcode' %}"></label>
+  <label><span class="sr-only">{% translate "Location" %}</span><select name="location"><option value="">{% translate "All locations" %}</option>{% for location in locations %}<option value="{{ location.pk }}" {% if selected_location == location.pk|stringformat:'s' %}selected{% endif %}>{{ location.full_path }}</option>{% endfor %}</select></label>
+  <label><span class="sr-only">{% translate "Status" %}</span><select name="status"><option value="">{% translate "All statuses" %}</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <button class="button" type="submit">{% translate "Search" %}</button>
+  {% if q or selected_status or selected_location %}<a class="button ghost" href="{% url 'inventory:reagent-list' %}">{% translate "Clear all" %}</a>{% endif %}
+</form>
+<section class="table-card" aria-live="polite">
+  {% if page_obj.object_list %}
+  <div class="table-scroll"><table>
+    <thead><tr><th><a href="?q={{ q|urlencode }}&status={{ selected_status }}&location={{ selected_location }}&ordering={% if ordering == 'name' %}-name{% else %}name{% endif %}">{% translate "Reagent" %}</a></th><th>CAS</th><th>{% translate "Quantity remaining" %}</th><th>{% translate "Location" %}</th><th>{% translate "Expiration date" %}</th><th>{% translate "Status" %}</th><th><span class="sr-only">{% translate "Actions" %}</span></th></tr></thead>
+    <tbody>{% for reagent in page_obj %}{% with package=reagent.packages.all.0 %}
+      <tr data-quick-url="{% url 'inventory:reagent-quick' reagent.pk %}" tabindex="0">
+        <td><a class="reagent-name" href="{{ reagent.get_absolute_url }}">{{ reagent.name }}</a><small>{{ reagent.formula }}{% if reagent.supplier %} · {{ reagent.supplier }}{% endif %}</small></td>
+        <td>{{ reagent.cas_number|default:"—" }}</td><td>{{ package.display_quantity|default:"—" }}</td><td>{{ package.location.full_path|default:"—" }}</td><td>{{ package.expires_at|date:"SHORT_DATE_FORMAT"|default:"—" }}</td>
+        <td><span class="status status-{{ package.status|default:'pending_review' }}">{{ package.get_status_display|default:_('Pending review') }}</span></td><td><button type="button" class="icon-button quick-open" aria-label="{% translate 'Open quick view' %}">›</button></td>
+      </tr>{% endwith %}{% endfor %}</tbody>
+  </table></div>
+  <footer class="table-footer"><span>{% blocktranslate with start=page_obj.start_index end=page_obj.end_index total=page_obj.paginator.count %}Showing {{ start }}–{{ end }} of {{ total }} reagents{% endblocktranslate %}</span><span>{% translate "Updated" %} {{ last_updated|time:"H:i" }}</span></footer>
+  <nav class="pagination" aria-label="{% translate 'Pagination' %}">{% if page_obj.has_previous %}<a href="?q={{ q|urlencode }}&status={{ selected_status }}&location={{ selected_location }}&page={{ page_obj.previous_page_number }}">← {% translate "Previous" %}</a>{% endif %}<span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?q={{ q|urlencode }}&status={{ selected_status }}&location={{ selected_location }}&page={{ page_obj.next_page_number }}">{% translate "Next" %} →</a>{% endif %}</nav>
+  {% else %}<div class="empty"><span class="empty-icon">⌕</span><h2>{% if q %}{% translate "No search results" %}{% else %}{% translate "No reagents yet" %}{% endif %}</h2><p>{% translate "Try changing the filters or add the first reagent." %}</p></div>{% endif %}
+</section>
+{% endblock %}

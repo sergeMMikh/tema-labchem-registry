@@ -2,9 +2,43 @@
 
 [English](README.md) · **Português**
 
+[Requisitos de conceção da base de dados](DATABASE_REQUIREMENTS.pt.md)
+
 Sistema de registo, pesquisa e localização de reagentes químicos para laboratórios, com acesso através de uma interface web na rede local e, futuramente, através de bots no Telegram e WhatsApp.
 
-> **Estado do projeto:** em planeamento; a implementação ainda não foi iniciada.
+> **Estado do projeto:** MVP implementado com os dados do inventário de 2026 importados. O OCR e os bots continuam previstos para fases posteriores.
+
+## Execução local
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements-dev.txt
+python manage.py migrate
+python manage.py setup_roles
+python manage.py runserver 8766
+```
+
+Abra `http://127.0.0.1:8766/`. A administração técnica está disponível em `/admin/`. Crie o primeiro administrador com `python manage.py createsuperuser`.
+
+Para importar ou atualizar um ficheiro XLSX:
+
+```powershell
+python manage.py import_inventory --source "C:\caminho\para\inventario.xlsx"
+```
+
+O comando é idempotente para o mesmo checksum do ficheiro. O PostgreSQL é ativado quando são definidas as variáveis `POSTGRES_*` apresentadas em `.env.example`; caso contrário, o desenvolvimento local utiliza SQLite.
+
+## Testes e lint
+
+```powershell
+.\venv\Scripts\python.exe -m pytest
+.\venv\Scripts\python.exe -m ruff check .
+.\venv\Scripts\python.exe -m ruff format --check .
+.\venv\Scripts\python.exe manage.py check
+```
+
+O pytest utiliza uma base de dados de testes isolada e gera `coverage.xml`. A cobertura exclui testes e migrações, com um mínimo de 85%. Os testes verificam permissões, operações de stock e rollback, formulários, páginas, pesquisa, parâmetros inválidos e importação local de XLSX sem acesso à rede. Se a porta 8766 estiver ocupada, utilize `python manage.py runserver 127.0.0.1:8767`.
 
 ## Objetivo
 

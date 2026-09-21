@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% load i18n %}{% block title %}{% translate "Add reagent" %} · TEMA{% endblock %}{% block content %}
+<header class="page-header"><div><p class="eyebrow">{% translate "Manual registration" %}</p><h1>{% translate "Add reagent" %}</h1><p>{% translate "Review all information before saving. Label recognition will be added later." %}</p></div></header>
+<form method="post" enctype="multipart/form-data" class="form-layout">{% csrf_token %}
+  {% if reagent_form.non_field_errors or package_form.non_field_errors %}<div class="notice error">{{ reagent_form.non_field_errors }}{{ package_form.non_field_errors }}</div>{% endif %}
+  <section class="panel"><span class="step">1</span><h2>{% translate "Reagent information" %}</h2><div class="form-grid">{% for field in reagent_form %}<div class="field {% if field.errors %}has-error{% endif %}">{{ field.label_tag }}{{ field }}{{ field.errors }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}</div>{% endfor %}</div></section>
+  <section class="panel"><span class="step">2</span><h2>{% translate "Package and location" %}</h2><div class="form-grid">{% for field in package_form %}<div class="field {% if field.errors %}has-error{% endif %}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div></section>
+  <div class="form-actions"><a class="button ghost" href="{% url 'inventory:reagent-list' %}">{% translate "Cancel" %}</a><button class="button primary" type="submit">{% translate "Save reagent" %}</button></div>
+</form>{% endblock %}

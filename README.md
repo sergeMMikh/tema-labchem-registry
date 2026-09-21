@@ -2,9 +2,43 @@
 
 **English** · [Português](README.pt.md)
 
+[Database design requirements](DATABASE_REQUIREMENTS.md)
+
 Chemical reagent registration, search, and location system for laboratories, accessible through a local-network web interface and, in future phases, through Telegram and WhatsApp bots.
 
-> **Project status:** Planning stage; implementation has not started yet.
+> **Project status:** MVP implemented with imported 2026 inventory data. OCR and messaging bots remain planned integrations.
+
+## Run locally
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements-dev.txt
+python manage.py migrate
+python manage.py setup_roles
+python manage.py runserver 8766
+```
+
+Open `http://127.0.0.1:8766/`. The technical administration interface is available at `/admin/`. Create its first administrator with `python manage.py createsuperuser`.
+
+To import or refresh an XLSX workbook:
+
+```powershell
+python manage.py import_inventory --source "C:\path\to\inventory.xlsx"
+```
+
+The command is idempotent for the same workbook checksum. PostgreSQL is enabled when the `POSTGRES_*` environment variables shown in `.env.example` are set; otherwise local development uses SQLite.
+
+## Tests and lint
+
+```powershell
+.\venv\Scripts\python.exe -m pytest
+.\venv\Scripts\python.exe -m ruff check .
+.\venv\Scripts\python.exe -m ruff format --check .
+.\venv\Scripts\python.exe manage.py check
+```
+
+Pytest uses an isolated test database and generates `coverage.xml`. Coverage excludes tests and migrations, with an 85% minimum. Tests cover permissions, stock operations and rollback, forms, pages, search, invalid query parameters, and local XLSX import without network access. If port 8766 is occupied, use `python manage.py runserver 127.0.0.1:8767`.
 
 ## Purpose
 
