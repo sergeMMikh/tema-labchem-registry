@@ -35,7 +35,10 @@ def _filtered_reagents(request):
         qs = qs.filter(packages__status=status).distinct()
     location = _location_parameter(request)
     if location:
-        qs = qs.filter(packages__location_id=location).distinct()
+        selected_location = get_object_or_404(Location, pk=location)
+        qs = qs.filter(
+            packages__location_id__in=selected_location.inventory_location_ids
+        ).distinct()
     ordering = request.GET.get("ordering", "name")
     if ordering not in {"name", "-name", "cas_number", "-updated_at"}:
         ordering = "name"
@@ -157,7 +160,9 @@ def location_list(request):
     if location := _location_parameter(request):
         selected = get_object_or_404(Location, pk=location)
     packages = (
-        Package.objects.filter(location=selected).select_related("reagent")
+        Package.objects.filter(location_id__in=selected.inventory_location_ids).select_related(
+            "reagent"
+        )
         if selected
         else Package.objects.none()
     )

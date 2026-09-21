@@ -1,1 +1,43 @@
-{% extends "base.html" %}{% load i18n %}{% block title %}{% translate "Locations" %} · TEMA{% endblock %}{% block content %}<header class="page-header"><div><p class="eyebrow">{% translate "Directories" %}</p><h1>{% translate "Locations" %}</h1><p>{% translate "Browse laboratories, cabinets and shelves" %}</p></div></header><div class="location-layout"><section class="panel tree"><h2>{% translate "Location tree" %}</h2>{% for root in roots %}<details open><summary>{{ root.name }}</summary>{% for lab in root.children.all %}<details open><summary><a href="?location={{ lab.pk }}">{{ lab.code|default:lab.name }}</a></summary>{% for cabinet in lab.children.all %}<details><summary><a href="?location={{ cabinet.pk }}">{{ cabinet.name }}</a></summary>{% for shelf in cabinet.children.all %}<a class="tree-leaf" href="?location={{ shelf.pk }}">{{ shelf.name }}</a>{% endfor %}</details>{% endfor %}</details>{% endfor %}</details>{% empty %}<p>{% translate "No locations have been registered." %}</p>{% endfor %}</section><section class="panel"><h2>{{ selected.full_path|default:_('Select a location') }}</h2>{% for package in packages %}<a class="content-row" href="{{ package.reagent.get_absolute_url }}"><span><strong>{{ package.reagent.name }}</strong><small>{{ package.reagent.cas_number }}</small></span><span>{{ package.display_quantity }}</span></a>{% empty %}<div class="empty small"><p>{% translate "Choose a location to view its contents." %}</p></div>{% endfor %}</section></div>{% endblock %}
+{% extends "base.html" %}
+{% load i18n static %}
+{% block title %}{% translate "Locations" %} · TEMA{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/locations.css' %}?v=2">
+<script src="{% static 'js/locations.js' %}?v=2" defer></script>
+<header class="page-header">
+  <div><p class="eyebrow">{% translate "Directories" %}</p><h1>{% translate "Locations" %}</h1><p>{% translate "Browse laboratories, cabinets and shelves" %}</p></div>
+</header>
+<div class="location-layout" id="location-browser">
+  <section class="panel tree location-pane" id="location-tree" tabindex="0" aria-label="{% translate 'Location tree' %}">
+    <h2>{% translate "Location tree" %}</h2>
+    {% for root in roots %}
+      <details open data-node="{{ root.pk }}"><summary>{{ root.name }}</summary>
+        {% for lab in root.children.all %}
+          <details open data-node="{{ lab.pk }}"><summary><a data-location="{{ lab.pk }}" href="?location={{ lab.pk }}">{{ lab.code|default:lab.name }}</a></summary>
+            {% for cabinet in lab.children.all %}
+              {% if cabinet.collapsed_shelf %}
+                <a class="tree-leaf" data-location="{{ cabinet.pk }}" href="?location={{ cabinet.pk }}">{{ cabinet.name }}</a>
+              {% else %}
+                <details data-node="{{ cabinet.pk }}"><summary><a data-location="{{ cabinet.pk }}" href="?location={{ cabinet.pk }}">{{ cabinet.name }}</a></summary>
+                  {% for shelf in cabinet.children.all %}
+                    <a class="tree-leaf" data-location="{{ shelf.pk }}" href="?location={{ shelf.pk }}">{{ shelf.name }}</a>
+                  {% endfor %}
+                </details>
+              {% endif %}
+            {% endfor %}
+          </details>
+        {% endfor %}
+      </details>
+    {% empty %}<p>{% translate "No locations have been registered." %}</p>{% endfor %}
+  </section>
+  <section class="panel location-pane" id="location-results" tabindex="0" aria-live="polite" aria-label="{% translate 'Reagents' %}" data-selected="{{ selected.pk|default:'' }}">
+    <h2>{{ selected.full_path|default:_('Select a location') }}</h2>
+    {% for package in packages %}
+      <a class="content-row" href="{{ package.reagent.get_absolute_url }}"><span><strong>{{ package.reagent.name }}</strong><small>{{ package.reagent.cas_number }}</small></span><span>{{ package.display_quantity }}</span></a>
+    {% empty %}
+      <div class="empty small"><p>{% translate "Choose a location to view its contents." %}</p></div>
+    {% endfor %}
+  </section>
+</div>
+<p id="location-error" role="alert" hidden>Não foi possível carregar. Tente novamente. / Could not load. Please try again.</p>
+{% endblock %}

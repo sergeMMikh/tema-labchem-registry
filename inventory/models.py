@@ -65,9 +65,35 @@ class Location(TimeStampedModel):
         return self.full_path
 
     @property
+    def collapsed_shelf(self):
+        """Hide a sole placeholder or a shelf repeating its cabinet's name."""
+        if self.location_type != self.Type.CABINET:
+            return None
+        children = list(self.children.all())
+        if len(children) == 1:
+            child = children[0]
+            if child.location_type == self.Type.SHELF and " ".join(
+                child.name.split()
+            ).casefold() in {"unspecified shelf", " ".join(self.name.split()).casefold()}:
+                return child
+        return None
+
+    @property
+    def inventory_location_ids(self):
+        shelf = self.collapsed_shelf
+        return [self.pk, shelf.pk] if shelf else [self.pk]
+
+    @property
     def full_path(self):
         nodes, current = [], self
         while current:
+            if (
+                current.location_type == self.Type.SHELF
+                and current.parent_id
+                and current.parent.collapsed_shelf is not None
+            ):
+                current = current.parent
+                continue
             nodes.append(current.code or current.name)
             current = current.parent
         return " · ".join(reversed(nodes))

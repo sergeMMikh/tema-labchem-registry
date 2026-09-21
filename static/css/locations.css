@@ -1,0 +1,35 @@
+#location-browser {
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr);
+  height: calc(100dvh - 230px);
+  min-height: 260px;
+  align-items: stretch;
+}
+#location-browser .location-pane {
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  overflow-anchor: none;
+}
+#location-browser h2 { overflow-wrap: anywhere; }
+#location-tree a { overflow-wrap: anywhere; }
+#location-tree a[aria-current="location"] {
+  background: #e0eef0;
+  border-radius: 4px;
+  color: var(--tema-dark);
+  font-weight: 700;
+  outline: 2px solid #e0eef0;
+}
+#location-results[aria-busy="true"] { opacity: .55; }
+#location-results .content-row { gap: 16px; }
+#location-results .content-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+#location-results .content-row > span:last-child { flex-shrink: 0; }
+@media (max-width: 650px) {
+  #location-browser {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(160px, 35%) minmax(220px, 65%);
+    height: calc(100dvh - 210px);
+    min-height: 410px;
+  }
+}
