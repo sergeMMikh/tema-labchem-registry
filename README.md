@@ -32,6 +32,21 @@ python manage.py import_sds_links --source "C:\path\to\inventory.xlsx"
 
 The first command imports inventory rows and is idempotent for the same workbook checksum. The second command reads hyperlinks embedded in Excel cells and associates the actual SDS URLs with imported reagents. PostgreSQL is enabled when the `POSTGRES_*` environment variables shown in `.env.example` are set; otherwise local development uses SQLite.
 
+## Telegram reagent search
+
+Set `TELEGRAM_BOT_TOKEN` in `.env`, then start a separate worker:
+
+```powershell
+.\venv\Scripts\python.exe manage.py run_telegram_bot --check
+.\venv\Scripts\python.exe manage.py run_telegram_bot
+```
+
+In a private chat with the bot, send `/start`, a reagent name, CAS, formula, manufacturer, catalogue reference or barcode. Multiple matches appear as buttons with pagination; selecting one displays the available packages and their laboratory/cabinet/shelf locations. One match displays its locations immediately. Written-off, missing, pending and reserved packages are excluded. Search matches text fragments, not spelling errors. Replies use PT/EN labels.
+
+The worker uses the same Django search service and database as the website. It polls the [Telegram Bot API](https://core.telegram.org/bots/api#getupdates), so it needs outbound HTTPS but no public web port. Run only one worker per token. Stop it with Ctrl+C. Pagination expires after one hour or a worker restart. Empty `TELEGRAM_ALLOWED_USER_IDS` allows any Telegram user to search in private chats; groups are ignored. The bot cannot change inventory.
+
+`SQLITE_PATH` in `.env` points to the existing SQLite database. SQLite has no server login/password. The optional `POSTGRES_*` settings select PostgreSQL only after real connection credentials and a data migration are provided. System environment variables take precedence over `.env`.
+
 ## Tests and lint
 
 ```powershell

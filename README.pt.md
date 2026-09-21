@@ -32,6 +32,21 @@ python manage.py import_sds_links --source "C:\caminho\para\inventario.xlsx"
 
 O primeiro comando importa as linhas do inventário e é idempotente para o mesmo checksum. O segundo lê as hiperligações incorporadas nas células do Excel e associa os URLs reais das FDS aos reagentes importados. O PostgreSQL é ativado quando são definidas as variáveis `POSTGRES_*` apresentadas em `.env.example`; caso contrário, o desenvolvimento local utiliza SQLite.
 
+## Pesquisa de reagentes no Telegram
+
+Defina `TELEGRAM_BOT_TOKEN` em `.env` e inicie um processo separado:
+
+```powershell
+.\venv\Scripts\python.exe manage.py run_telegram_bot --check
+.\venv\Scripts\python.exe manage.py run_telegram_bot
+```
+
+Numa conversa privada com o bot, envie `/start`, nome, CAS, fórmula, fabricante, referência de catálogo ou código de barras. Vários resultados são apresentados em botões com paginação. Após a seleção, o bot mostra as embalagens disponíveis e as localizações laboratório/armário/prateleira. Um único resultado mostra imediatamente as localizações. Embalagens abatidas, não encontradas, por rever ou reservadas são excluídas. A pesquisa utiliza fragmentos de texto, sem correção de erros ortográficos. As respostas têm legendas PT/EN.
+
+O processo utiliza o mesmo serviço de pesquisa e a mesma base de dados Django do site. Consulta a [API do Telegram](https://core.telegram.org/bots/api#getupdates) por HTTPS, sem exigir uma porta web pública. Execute apenas um processo por token e pare-o com Ctrl+C. A paginação expira após uma hora ou reinício. `TELEGRAM_ALLOWED_USER_IDS` vazio permite pesquisas de qualquer utilizador em conversas privadas; os grupos são ignorados. O bot não altera o inventário.
+
+`SQLITE_PATH` em `.env` identifica a base SQLite existente, que não utiliza credenciais de servidor. As opções `POSTGRES_*` só selecionam PostgreSQL após configuração de credenciais reais e migração dos dados. As variáveis do sistema têm prioridade sobre `.env`.
+
 ## Testes e lint
 
 ```powershell

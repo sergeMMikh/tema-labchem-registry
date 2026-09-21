@@ -64,7 +64,10 @@ if os.environ.get("POSTGRES_DB"):
     }
 else:
     DATABASES = {
-        "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / os.environ.get("SQLITE_PATH", "db.sqlite3"),
+        }
     }
 
 AUTH_PASSWORD_VALIDATORS = (
@@ -89,6 +92,13 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "admin:login"
+
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_ALLOWED_USER_IDS = {
+    int(value.strip())
+    for value in os.environ.get("TELEGRAM_ALLOWED_USER_IDS", "").split(",")
+    if value.strip()
+}
 
 if not DEBUG:
     SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "31536000"))

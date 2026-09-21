@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Count, Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -13,6 +13,7 @@ from django.utils.translation import gettext as _
 
 from .forms import MovePackageForm, PackageForm, ReagentForm, UsePackageForm, WriteOffForm
 from .models import Location, Package, Reagent
+from .search import search_reagents
 from .services import move_package, use_package, write_off_package
 
 
@@ -27,19 +28,8 @@ def _location_parameter(request):
 
 
 def _filtered_reagents(request):
-    qs = Reagent.objects.select_related("supplier", "category").prefetch_related(
-        Prefetch("packages", queryset=Package.objects.select_related("location"))
-    )
     q = request.GET.get("q", "").strip()
-    if q:
-        qs = qs.filter(
-            Q(name__icontains=q)
-            | Q(formula__icontains=q)
-            | Q(cas_number__icontains=q)
-            | Q(supplier__name__icontains=q)
-            | Q(catalog_number__icontains=q)
-            | Q(packages__barcode__icontains=q)
-        ).distinct()
+    qs = search_reagents(q)
     status = request.GET.get("status", "")
     if status:
         qs = qs.filter(packages__status=status).distinct()
