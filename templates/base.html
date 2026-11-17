@@ -5,8 +5,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}TEMA Reagents{% endblock %}</title>
-  <link rel="icon" href="{% static 'images/teal-materials-lab-crystal-logo.png' %}" type="image/png">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261117-materials-logo">
+  <link rel="icon" href="{% static 'images/teal-tema-lab-chemicals-icon.png' %}" type="image/png">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261117-chemicals-icon">
   <link rel="stylesheet" href="{% static 'css/sds.css' %}">
   <script src="{% static 'js/app.js' %}" defer></script>
 </head>
@@ -34,7 +34,7 @@
   </header>
   <div class="app-layout">
     <aside class="sidebar">
-      <div class="sidebar-logo"><img src="{% static 'images/teal-materials-lab-crystal-logo.png' %}" alt="TEMA Materials Lab"></div>
+      <div class="sidebar-logo"><img src="{% static 'images/teal-tema-lab-chemicals-icon.png' %}" alt="TEMA Lab Chemicals"></div>
       <p class="eyebrow">{% translate "Inventory" %}</p>
       <a href="{% url 'inventory:reagent-list' %}">{% translate "All reagents" %}</a>
       <a href="{% url 'inventory:reagent-list' %}?status=available">{% translate "Packages" %}</a>
