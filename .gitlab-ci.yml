@@ -21,7 +21,7 @@ lint:ruff:
   tags: [saas-linux-small-amd64]
   image: python:3.14-slim
   script:
-    - python -m pip install --no-cache-dir ruff==0.15.20
+    - python -m pip install --no-cache-dir ruff==0.16.8
     - ruff check . --select E4,E7,E9,F
 
 test:inventory:
@@ -50,7 +50,7 @@ sast:bandit:
   tags: [saas-linux-small-amd64]
   image: python:3.14-slim
   script:
-    - python -m pip install --no-cache-dir bandit==1.8.6
+    - python -m pip install --no-cache-dir bandit==1.9.4
     - bandit -r config inventory scripts/ci -x inventory/tests,inventory/migrations -f json -o bandit-report.json || test -s bandit-report.json
   artifacts:
     when: always
@@ -99,7 +99,7 @@ security:pip-audit:
   tags: [saas-linux-small-amd64]
   image: python:3.14-slim
   script:
-    - python -m pip install --no-cache-dir pip-audit
+    - python -m pip install --no-cache-dir pip-audit==2.10.1
     - pip-audit -r requirements.txt -f json -o pip-audit-report.json || test -s pip-audit-report.json
   artifacts:
     when: always

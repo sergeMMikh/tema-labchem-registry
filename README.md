@@ -51,6 +51,8 @@ The worker uses the same Django search service and database as the website. It p
 
 Set the `WHATSAPP_*` and `META_APP_SECRET` variables shown in `.env.example`, then configure the Meta webhook callback to `WHATSAPP_WEBHOOK_URL` and subscribe the app to the WABA `messages` field. Incoming text supports `/start`, `/help`, `/search`, `/pesquisar`, names, CAS numbers, formulas and manufacturers. Multiple matches appear as a WhatsApp list with selection and pagination; one match shows its available packages and locations immediately. Results include the SDS link when present. `/pt`, `/en` and `/auto` control voice recognition language. Voice search uses the same local model and 30-second / 5-MB limit as Telegram. Empty `WHATSAPP_ALLOWED_USER_IDS` allows any sender; otherwise enter comma-separated phone numbers. The bot only reads inventory. Search pages expire after one hour or a webhook process restart.
 
+Security CI: [GitLab pipeline and policy](docs/SECURITY-CI.md) · [Português](docs/SECURITY-CI.pt.md) · [Русский](docs/SECURITY-CI.ru.md).
+
 ## Tests and lint
 
 ```powershell

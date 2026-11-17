@@ -51,6 +51,8 @@ O processo utiliza o mesmo serviço de pesquisa e a mesma base de dados Django d
 
 Defina as variáveis `WHATSAPP_*` e `META_APP_SECRET` indicadas em `.env.example`, configure o webhook da Meta com `WHATSAPP_WEBHOOK_URL` e subscreva o campo `messages` da conta WhatsApp Business. O texto aceita `/start`, `/help`, `/search`, `/pesquisar`, nomes, CAS, fórmulas e fabricantes. Vários resultados aparecem numa lista com seleção e paginação; um resultado mostra logo as embalagens disponíveis e localizações. A resposta inclui a ligação SDS quando existe. `/pt`, `/en` e `/auto` selecionam o idioma da pesquisa por voz. A voz usa o mesmo modelo local e o limite de 30 segundos / 5 MB do Telegram. `WHATSAPP_ALLOWED_USER_IDS` vazio permite qualquer remetente; caso contrário, introduza números separados por vírgulas. O bot apenas consulta o inventário. As páginas expiram após uma hora ou reinício do processo webhook.
 
+CI de segurança: [pipeline GitLab e política](docs/SECURITY-CI.pt.md) · [English](docs/SECURITY-CI.md) · [Русский](docs/SECURITY-CI.ru.md).
+
 ## Testes e lint
 
 ```powershell

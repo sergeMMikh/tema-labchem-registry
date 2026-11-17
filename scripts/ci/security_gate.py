@@ -75,6 +75,8 @@ def main():
         blockers.append(f'TruffleHog: {verified} verified secret(s)')
 
     bandit = load_json('bandit-report.json')
+    if bandit.get('errors'):
+        blockers.append('Bandit: scanner errors; analysis is incomplete')
     bandit_high = sum(
         str(finding.get('issue_severity', '')).upper() == 'HIGH'
         for finding in bandit.get('results', [])
@@ -101,8 +103,8 @@ def main():
                 f"Trivy {name}: CRITICAL={counts['CRITICAL']}, HIGH={counts['HIGH']}"
             )
 
-    semgrep = Path('semgrep-report.json')
-    summary.append('Semgrep: report available' if semgrep.is_file() else 'Semgrep: no report')
+    semgrep = load_json('semgrep-report.json')
+    summary.append(f"Semgrep findings: {len(semgrep.get('results', []))} (report only)")
 
     status = 'BLOCKED' if blockers else 'PASSED'
     report = {
