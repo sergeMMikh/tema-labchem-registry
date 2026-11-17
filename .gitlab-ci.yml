@@ -18,7 +18,7 @@ stages:
 
 lint:ruff:
   stage: lint
-  tags: [saas-linux-small-amd64]
+  tags: [build, docker]
   image: python:3.14-slim
   script:
     - python -m pip install --no-cache-dir ruff==0.16.8
@@ -26,7 +26,7 @@ lint:ruff:
 
 test:inventory:
   stage: test
-  tags: [saas-linux-small-amd64]
+  tags: [build, docker]
   image: python:3.14-slim
   variables:
     DJANGO_SECRET_KEY: "ci-only-ephemeral-key-never-used-by-the-running-site"
@@ -47,7 +47,7 @@ test:inventory:
 sast:bandit:
   stage: sast
   needs: []
-  tags: [saas-linux-small-amd64]
+  tags: [security, sast]
   image: python:3.14-slim
   script:
     - python -m pip install --no-cache-dir bandit==1.9.4
@@ -62,7 +62,7 @@ sast:bandit:
 sast:semgrep:
   stage: sast
   needs: []
-  tags: [saas-linux-small-amd64]
+  tags: [security, sast]
   image:
     name: semgrep/semgrep:1.136.0
     entrypoint: [""]
@@ -78,7 +78,7 @@ sast:semgrep:
 security:trufflehog:
   stage: secret-scan
   needs: []
-  tags: [saas-linux-small-amd64]
+  tags: [security, sast]
   image:
     name: ghcr.io/trufflesecurity/trufflehog:latest
     entrypoint: [""]
@@ -96,7 +96,7 @@ security:trufflehog:
 security:pip-audit:
   stage: dependency-audit
   needs: []
-  tags: [saas-linux-small-amd64]
+  tags: [security, sast]
   image: python:3.14-slim
   script:
     - python -m pip install --no-cache-dir pip-audit==2.10.1
@@ -111,7 +111,7 @@ security:pip-audit:
 security:trivy-fs:
   stage: security-audit
   needs: []
-  tags: [saas-linux-small-amd64]
+  tags: [security, sast]
   image:
     name: aquasec/trivy:0.75.0
     entrypoint: [""]
@@ -132,7 +132,7 @@ security:trivy-fs:
 security:trivy-image:
   stage: image-scan
   needs: []
-  tags: [saas-linux-small-amd64]
+  tags: [build, docker]
   image: docker:27-cli
   services:
     - name: docker:27-dind
@@ -152,7 +152,7 @@ security:trivy-image:
 
 security:gateway:
   stage: security-gateway
-  tags: [saas-linux-small-amd64]
+  tags: [security, sast]
   image: python:3.14-slim
   needs:
     - job: sast:bandit

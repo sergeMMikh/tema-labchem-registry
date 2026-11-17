@@ -4,7 +4,7 @@
 
 The pipeline follows `E:\git_prog\xps-journal\.gitlab-ci.yml`. The project instructions were copied to `AGENTS.md` at the user's request.
 
-Every branch push and merge request runs `.gitlab-ci.yml`; open merge requests suppress duplicate branch pipelines. Jobs use GitLab hosted Linux runners tagged `saas-linux-small-amd64`. No production credentials, database, SSH access or deployment are required. Docker-in-Docker builds a disposable image for scanning; the image is neither published nor deployed. The existing XPS S3 connectivity job is omitted because this project has no corresponding S3 requirement.
+Every branch push and merge request runs `.gitlab-ci.yml`; open merge requests suppress duplicate branch pipelines. Jobs use the assigned project runners: `build, docker` for lint/tests/image and `security, sast` for security scans and the gateway. No production credentials, database, SSH access or deployment are required. Docker-in-Docker builds a disposable image for scanning; the image is neither published nor deployed. The existing XPS S3 connectivity job is omitted because this project has no corresponding S3 requirement.
 
 | Check | Purpose |
 | --- | --- |

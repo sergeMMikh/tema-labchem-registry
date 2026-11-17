@@ -4,7 +4,7 @@
 
 O pipeline segue `E:\git_prog\xps-journal\.gitlab-ci.yml`. As instruções desse projeto foram copiadas para `AGENTS.md` a pedido do utilizador.
 
-Cada push de um ramo e cada merge request executam `.gitlab-ci.yml`. Os merge requests abertos evitam pipelines duplicados. São utilizados runners Linux do GitLab com a etiqueta `saas-linux-small-amd64`. Não são necessárias credenciais de produção, base de dados, SSH ou implementação. Docker-in-Docker constrói uma imagem temporária para análise, sem publicação nem implementação. A verificação S3 do projeto XPS não se aplica a este projeto.
+Cada push de um ramo e cada merge request executam `.gitlab-ci.yml`. Os merge requests abertos evitam pipelines duplicados. São utilizados runners do projeto: `build, docker` para lint/testes/imagem e `security, sast` para seguran?a e gateway. Não são necessárias credenciais de produção, base de dados, SSH ou implementação. Docker-in-Docker constrói uma imagem temporária para análise, sem publicação nem implementação. A verificação S3 do projeto XPS não se aplica a este projeto.
 
 O pipeline executa Ruff, pytest com cobertura mínima de 85%, Bandit 1.9.4 compatível com Python 3.14, Semgrep (`p/default`), TruffleHog sobre todo o histórico Git, pip-audit e Trivy para ficheiros, configuração e imagem. O gateway reúne os relatórios de segurança.
 
