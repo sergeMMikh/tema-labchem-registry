@@ -5,6 +5,7 @@ from . import views
 app_name = "inventory"
 urlpatterns = [
     path("", views.reagent_list, name="reagent-list"),
+    path("export.xlsx", views.export_inventory, name="export-inventory"),
     path("overview/", views.overview, name="overview"),
     path("reagents/", views.reagent_list, name="reagent-list-alt"),
     path("reagents/add/", views.reagent_create, name="reagent-create"),

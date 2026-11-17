@@ -1,0 +1,14 @@
+xps.35-180-221-185.sslip.io, xps.smmikh.pt {
+	encode gzip
+	reverse_proxy 127.0.0.1:18080
+}
+
+reagents.smmikh.pt {
+	encode gzip
+	handle /whatsapp/webhook/ {
+		reverse_proxy 127.0.0.1:18081
+	}
+	handle {
+		respond 404
+	}
+}

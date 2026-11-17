@@ -5,12 +5,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
-from django.http import Http404, JsonResponse
+from django.db.models import Count, Prefetch, Q
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
+from .exports import build_inventory_export, export_filename
 from .forms import MovePackageForm, PackageForm, ReagentForm, UsePackageForm, WriteOffForm
 from .models import Location, Package, Reagent
 from .search import search_reagents
@@ -18,7 +19,10 @@ from .services import move_package, use_package, write_off_package
 
 
 def _location_parameter(request):
-    value = request.GET.get("location", "")
+    value = next(
+        (request.GET.get(key, "") for key in ("location", "cabinet", "lab") if request.GET.get(key)),
+        "",
+    )
     if value:
         try:
             UUID(value)
@@ -31,39 +35,84 @@ def _filtered_reagents(request):
     q = request.GET.get("q", "").strip()
     qs = search_reagents(q)
     status = request.GET.get("status", "")
-    if status:
-        qs = qs.filter(packages__status=status).distinct()
     location = _location_parameter(request)
+    sheet = request.GET.get("sheet", "").strip()[:100]
+    matching_packages = Package.objects.all()
+    if status:
+        matching_packages = matching_packages.filter(status=status)
     if location:
         selected_location = get_object_or_404(Location, pk=location)
-        qs = qs.filter(
-            packages__location_id__in=selected_location.inventory_location_ids
-        ).distinct()
+        matching_packages = matching_packages.filter(
+            location_id__in=selected_location.inventory_location_ids
+        )
+    if sheet:
+        matching_packages = matching_packages.filter(source_key__contains=f":{sheet}:")
+    if status or location or sheet:
+        qs = qs.filter(packages__in=matching_packages).distinct()
+        qs = qs.prefetch_related(None).prefetch_related(
+            Prefetch(
+                "packages",
+                queryset=matching_packages.select_related("location__parent__parent__parent"),
+            )
+        )
     ordering = request.GET.get("ordering", "name")
     if ordering not in {"name", "-name", "cas_number", "-updated_at"}:
         ordering = "name"
-    return qs.order_by(ordering), q, status, location, ordering
+    return qs.order_by(ordering), q, status, location, ordering, sheet
 
 
 def reagent_list(request):
-    qs, q, status, location, ordering = _filtered_reagents(request)
+    qs, q, status, location, ordering, sheet = _filtered_reagents(request)
     try:
         per_page = int(request.GET.get("per_page", 20))
     except ValueError:
         per_page = 20
     paginator = Paginator(qs, min(max(per_page, 10), 100))
     page = paginator.get_page(request.GET.get("page"))
+    selected = (
+        Location.objects.select_related("parent__parent").filter(pk=location).first()
+        if location else None
+    )
+    selected_lab = selected
+    while selected_lab and selected_lab.location_type != Location.Type.LABORATORY:
+        selected_lab = selected_lab.parent
+    sheet_options = set()
+    for source_key, lab_id in Package.objects.exclude(source_key__isnull=True).exclude(
+        source_key=""
+    ).values_list("source_key", "location__parent__parent_id"):
+        if not lab_id or ":" not in source_key:
+            continue
+        source_sheet, separator, row = source_key.partition(":")[2].rpartition(":")
+        if separator and row.isdigit():
+            sheet_options.add((lab_id, source_sheet))
     context = {
         "page_obj": page,
         "q": q,
         "selected_status": status,
         "selected_location": location,
+        "selected_sheet": sheet,
         "ordering": ordering,
-        "locations": Location.objects.filter(is_active=True),
+        "labs": Location.objects.filter(
+            is_active=True, location_type=Location.Type.LABORATORY
+        ).order_by("code"),
+        "sheet_options": [
+            {"lab_id": lab_id, "name": name}
+            for lab_id, name in sorted(sheet_options, key=lambda item: item[1].casefold())
+        ],
+        "selected_lab": selected_lab,
         "status_choices": Package.Status.choices,
         "last_updated": timezone.now(),
     }
     return render(request, "inventory/reagent_list.html", context)
+
+
+def export_inventory(request):
+    response = HttpResponse(
+        build_inventory_export().getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{export_filename()}"'
+    return response
 
 
 def reagent_quick_view(request, pk):

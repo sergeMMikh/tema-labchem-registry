@@ -1,21 +1,25 @@
-{% extends "base.html" %}{% load i18n %}
+{% extends "base.html" %}{% load i18n static %}
 {% block title %}{% translate "Reagents" %} · TEMA{% endblock %}
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/reagent_filters.css' %}?v=1">
+<script src="{% static 'js/reagent_filters.js' %}?v=1" defer></script>
 <header class="page-header">
   <div><p class="eyebrow">TEMA Lab Inventory</p><h1>{% translate "Reagents" %}</h1><p>{% translate "Inventory, search and control of laboratory stocks" %}</p></div>
+  <a class="button" href="{% url 'inventory:export-inventory' %}">Export Excel</a>
   {% if perms.inventory.add_reagent %}<a class="button primary" href="{% url 'inventory:reagent-create' %}">+ {% translate "Add reagent" %}</a>{% endif %}
 </header>
-<form method="get" class="filter-panel" role="search">
+<form method="get" class="filter-panel location-filters" role="search">
   <label class="search-field"><span class="sr-only">{% translate "Search" %}</span><input name="q" value="{{ q }}" placeholder="{% translate 'Name, formula, CAS, manufacturer or barcode' %}"></label>
-  <label><span class="sr-only">{% translate "Location" %}</span><select name="location"><option value="">{% translate "All locations" %}</option>{% for location in locations %}<option value="{{ location.pk }}" {% if selected_location == location.pk|stringformat:'s' %}selected{% endif %}>{{ location.full_path }}</option>{% endfor %}</select></label>
+  <label><span class="sr-only">{% translate "Laboratory" %}</span><select name="lab" id="filter-lab" aria-label="{% translate 'Laboratory' %}"><option value="">{% translate "All laboratories" %}</option>{% for lab in labs %}<option value="{{ lab.pk }}" {% if selected_lab.pk == lab.pk %}selected{% endif %}>{{ lab.code|default:lab.name }}</option>{% endfor %}</select></label>
+  <label><span class="sr-only">{% translate "Excel sheet" %}</span><select name="sheet" id="filter-sheet" aria-label="{% translate 'Excel sheet' %}"><option value="">{% translate "All sheets" %}</option>{% for source_sheet in sheet_options %}<option value="{{ source_sheet.name }}" data-lab="{{ source_sheet.lab_id }}" {% if selected_lab.pk == source_sheet.lab_id and selected_sheet == source_sheet.name %}selected{% endif %}>{{ source_sheet.name }}</option>{% endfor %}</select></label>
   <label><span class="sr-only">{% translate "Status" %}</span><select name="status"><option value="">{% translate "All statuses" %}</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
   <button class="button" type="submit">{% translate "Search" %}</button>
-  {% if q or selected_status or selected_location %}<a class="button ghost" href="{% url 'inventory:reagent-list' %}">{% translate "Clear all" %}</a>{% endif %}
+  {% if q or selected_status or selected_location or selected_sheet %}<a class="button ghost" href="{% url 'inventory:reagent-list' %}">{% translate "Clear all" %}</a>{% endif %}
 </form>
 <section class="table-card" aria-live="polite">
   {% if page_obj.object_list %}
   <div class="table-scroll"><table>
-    <thead><tr><th><a href="?q={{ q|urlencode }}&status={{ selected_status }}&location={{ selected_location }}&ordering={% if ordering == 'name' %}-name{% else %}name{% endif %}">{% translate "Reagent" %}</a></th><th>CAS</th><th>{% translate "Quantity remaining" %}</th><th>{% translate "Location" %}</th><th>{% translate "Expiration date" %}</th><th>SDS</th><th>{% translate "Status" %}</th><th><span class="sr-only">{% translate "Actions" %}</span></th></tr></thead>
+    <thead><tr><th><a href="?q={{ q|urlencode }}&status={{ selected_status }}&location={{ selected_location }}&sheet={{ selected_sheet|urlencode }}&ordering={% if ordering == 'name' %}-name{% else %}name{% endif %}">{% translate "Reagent" %}</a></th><th>CAS</th><th>{% translate "Quantity remaining" %}</th><th>{% translate "Location" %}</th><th>{% translate "Expiration date" %}</th><th>SDS</th><th>{% translate "Status" %}</th><th><span class="sr-only">{% translate "Actions" %}</span></th></tr></thead>
     <tbody>{% for reagent in page_obj %}{% with package=reagent.packages.all.0 %}
       <tr data-quick-url="{% url 'inventory:reagent-quick' reagent.pk %}" tabindex="0">
         <td><a class="reagent-name" href="{{ reagent.get_absolute_url }}">{{ reagent.name }}</a><small>{{ reagent.formula }}{% if reagent.supplier %} · {{ reagent.supplier }}{% endif %}</small></td>
@@ -24,7 +28,7 @@
       </tr>{% endwith %}{% endfor %}</tbody>
   </table></div>
   <footer class="table-footer"><span>{% blocktranslate with start=page_obj.start_index end=page_obj.end_index total=page_obj.paginator.count %}Showing {{ start }}–{{ end }} of {{ total }} reagents{% endblocktranslate %}</span><span>{% translate "Updated" %} {{ last_updated|time:"H:i" }}</span></footer>
-  <nav class="pagination" aria-label="{% translate 'Pagination' %}">{% if page_obj.has_previous %}<a href="?q={{ q|urlencode }}&status={{ selected_status }}&location={{ selected_location }}&page={{ page_obj.previous_page_number }}">← {% translate "Previous" %}</a>{% endif %}<span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?q={{ q|urlencode }}&status={{ selected_status }}&location={{ selected_location }}&page={{ page_obj.next_page_number }}">{% translate "Next" %} →</a>{% endif %}</nav>
+  <nav class="pagination" aria-label="{% translate 'Pagination' %}">{% if page_obj.has_previous %}<a href="?q={{ q|urlencode }}&status={{ selected_status }}&location={{ selected_location }}&sheet={{ selected_sheet|urlencode }}&page={{ page_obj.previous_page_number }}">← {% translate "Previous" %}</a>{% endif %}<span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?q={{ q|urlencode }}&status={{ selected_status }}&location={{ selected_location }}&sheet={{ selected_sheet|urlencode }}&page={{ page_obj.next_page_number }}">{% translate "Next" %} →</a>{% endif %}</nav>
   {% else %}<div class="empty"><span class="empty-icon">⌕</span><h2>{% if q %}{% translate "No search results" %}{% else %}{% translate "No reagents yet" %}{% endif %}</h2><p>{% translate "Try changing the filters or add the first reagent." %}</p></div>{% endif %}
 </section>
 {% endblock %}

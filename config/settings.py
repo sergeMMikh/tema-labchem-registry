@@ -94,6 +94,21 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "admin:login"
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+WHATSAPP_WEBHOOK_VERIFY_TOKEN = os.environ.get("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "")
+META_APP_SECRET = os.environ.get("META_APP_SECRET", "")
+WHATSAPP_ACCESS_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN", "")
+WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
+WHATSAPP_API_VERSION = os.environ.get("WHATSAPP_API_VERSION", "v25.0")
+WHATSAPP_VOICE_ENABLED = os.environ.get(
+    "WHATSAPP_VOICE_ENABLED", os.environ.get("TELEGRAM_VOICE_ENABLED", "0")
+) == "1"
+WHATSAPP_ALLOWED_USER_IDS = {
+    value.lstrip("+").strip()
+    for value in os.environ.get("WHATSAPP_ALLOWED_USER_IDS", "").split(",")
+    if value.strip()
+}
+TELEGRAM_VOICE_ENABLED = os.environ.get("TELEGRAM_VOICE_ENABLED", "0") == "1"
+TELEGRAM_VOICE_MODEL = BASE_DIR / os.environ.get("TELEGRAM_VOICE_MODEL", "models/whisper-small")
 TELEGRAM_ALLOWED_USER_IDS = {
     int(value.strip())
     for value in os.environ.get("TELEGRAM_ALLOWED_USER_IDS", "").split(",")

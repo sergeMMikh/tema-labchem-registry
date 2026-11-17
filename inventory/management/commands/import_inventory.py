@@ -9,7 +9,10 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from openpyxl import load_workbook
 
-from inventory.models import ImportBatch, Location, Package, Reagent, StockMovement, Supplier
+from inventory.models import (
+    ImportBatch, Location, Package, Reagent, StockMovement, Supplier,
+    canonical_location_name, location_name_key,
+)
 
 DEFAULT_SOURCE = "https://uapt33090-my.sharepoint.com/:x:/g/personal/lrocha_ua_pt/IQAWNeX4mo45S6fXA5kON1MQAeEI0trkb8UDvVU3lHDq-_Q?e=ttVMRJ&download=1"
 HEADER_ALIASES = {
@@ -21,7 +24,14 @@ HEADER_ALIASES = {
     "remaining": {"estimated quantity left", "quantity remaining"},
     "storage": {"storage", "localização", "sala/laboratório"},
     "shelf": {"shelf", "wood cabinet", "armário", "prateleira"},
-    "sds": {"link to sds", "link to msds", "sds", "other sds"},
+    "sds": {
+        "link to sds",
+        "link to msds",
+        "sds",
+        "other sds",
+        "safety sheet data (sds)",
+        "link to sds (safety data sheet)",
+    },
     "reference": {"reference", "referencia", "referência", "code"},
     "expiry": {"validade", "expired"},
     "physical_state": {"physical state"},
@@ -38,7 +48,7 @@ def clean(value):
 
 
 def canonical_header(value):
-    value = clean(value).lower().strip(":")
+    value = " ".join(clean(value).lower().split()).strip(":")
     if value.startswith("storage:"):
         return "storage"
     for canonical, aliases in HEADER_ALIASES.items():
@@ -115,6 +125,8 @@ class Command(BaseCommand):
         skip_sheets = set()
         if "Inventário Gases (agosto 2026)" in workbook.sheetnames:
             skip_sheets.add("Inventário Gases (abril 2026)")
+        if "Vapour extract cabinet_print 26" in workbook.sheetnames:
+            skip_sheets.add("Vapour extract cabinet_print 26")
 
         building, _ = Location.objects.get_or_create(
             name="TEMA", code="TEMA", location_type=Location.Type.BUILDING, parent=None
@@ -153,8 +165,14 @@ class Command(BaseCommand):
                 if Package.objects.filter(source_key=source_key).exists():
                     continue
                 supplier = None
-                if record.get("supplier"):
-                    supplier, _ = Supplier.objects.get_or_create(name=record["supplier"][:200])
+                supplier_name = record.get("supplier", "")
+                if supplier_name and parse_quantity(supplier_name)[0] is not None:
+                    warnings.append(
+                        f"{sheet.title}:{row_number}: ignored quantity-like supplier '{supplier_name}'"
+                    )
+                    supplier_name = ""
+                if supplier_name:
+                    supplier, _ = Supplier.objects.get_or_create(name=supplier_name[:200])
                 cas = normalize_cas(record.get("cas", ""))
                 reagent = self.get_reagent(name, cas, supplier, record, sheet.title, row_number)
                 location = self.get_location(
@@ -225,7 +243,11 @@ class Command(BaseCommand):
         return match.group(0) if match else "Unassigned"
 
     def get_reagent(self, name, cas, supplier, record, sheet, row):
-        lookup = {"cas_number": cas} if cas else {"name__iexact": name, "supplier": supplier}
+        lookup = (
+            {"cas_number": cas, "supplier": supplier}
+            if cas
+            else {"name__iexact": name, "supplier": supplier}
+        )
         reagent = Reagent.objects.filter(**lookup).first()
         if reagent:
             return reagent
@@ -258,15 +280,31 @@ class Command(BaseCommand):
         cabinet_name = (
             re.sub(r"\b\d+\.\d+\.\d+\b", "", clean(storage)).strip(" ()-,") or "Unspecified storage"
         )
-        cabinet, _ = Location.objects.get_or_create(
-            parent=lab,
-            code=cabinet_name[:80],
-            defaults={"name": cabinet_name[:200], "location_type": Location.Type.CABINET},
-        )
+        cabinet = self.get_or_create_location(lab, cabinet_name, Location.Type.CABINET)
         shelf_name = clean(shelf) or "Unspecified shelf"
-        shelf_obj, _ = Location.objects.get_or_create(
-            parent=cabinet,
-            code=shelf_name[:80],
-            defaults={"name": shelf_name[:200], "location_type": Location.Type.SHELF},
-        )
+        collapsed = cabinet.collapsed_shelf
+        if collapsed and (
+            shelf_name == "Unspecified shelf"
+            or location_name_key(shelf_name) == location_name_key(cabinet.name)
+        ):
+            return collapsed
+        shelf_obj = self.get_or_create_location(cabinet, shelf_name, Location.Type.SHELF)
         return shelf_obj
+
+    @staticmethod
+    def get_or_create_location(parent, name, location_type):
+        name = canonical_location_name(name[:200])
+        code = name[:80]
+        existing = Location.objects.filter(parent=parent, code=code).first()
+        if existing:
+            return existing
+        key = location_name_key(name)
+        for sibling in Location.objects.filter(parent=parent, location_type=location_type):
+            if location_name_key(sibling.name) == key:
+                return sibling
+        location, _ = Location.objects.get_or_create(
+            parent=parent,
+            code=code,
+            defaults={"name": name, "location_type": location_type},
+        )
+        return location

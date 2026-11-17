@@ -1,4 +1,5 @@
 import uuid
+import re
 from decimal import Decimal
 
 from django.conf import settings
@@ -35,6 +36,19 @@ class Category(TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+
+def canonical_location_name(value):
+    """Apply confirmed aliases for the same physical storage location."""
+    name = " ".join(value.split())
+    if name.casefold() in {"broken desicador", "broken desiccator", "broken dessicator"}:
+        return "Broken Desiccator"
+    return name
+
+
+def location_name_key(value):
+    """Compare location names while ignoring confirmed aliases, hyphen spacing and case."""
+    return re.sub(r"\s*-\s*", "-", canonical_location_name(value)).casefold()
 
 
 class Location(TimeStampedModel):
@@ -80,13 +94,20 @@ class Location(TimeStampedModel):
 
     @property
     def inventory_location_ids(self):
-        shelf = self.collapsed_shelf
-        return [self.pk, shelf.pk] if shelf else [self.pk]
+        ids = []
+        pending = [self]
+        while pending:
+            location = pending.pop()
+            ids.append(location.pk)
+            pending.extend(location.children.all())
+        return ids
 
     @property
     def full_path(self):
         nodes, current = [], self
         while current:
+            if current.location_type == self.Type.BUILDING and nodes:
+                break
             if (
                 current.location_type == self.Type.SHELF
                 and current.parent_id

@@ -1,0 +1,18 @@
+.filter-panel.location-filters {
+  grid-template-columns: minmax(220px, 2fr) minmax(120px, .75fr) minmax(240px, 1.5fr) minmax(170px, .85fr) auto auto;
+}
+
+@media (max-width: 1200px) {
+  .filter-panel.location-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .filter-panel.location-filters .search-field {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 650px) {
+  .filter-panel.location-filters {
+    grid-template-columns: 1fr;
+  }
+}

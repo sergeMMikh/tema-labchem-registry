@@ -3,11 +3,14 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from inventory.whatsapp_webhook import verify_webhook
+
 admin.site.site_header = "TEMA Reagents — Administração"
 admin.site.site_title = "TEMA Reagents"
 admin.site.index_title = "Gestão técnica"
 
 urlpatterns = [
+    path("whatsapp/webhook/", verify_webhook, name="whatsapp-webhook"),
     path("admin/", admin.site.urls),
     path("i18n/", include("django.conf.urls.i18n")),
     path("", include("inventory.urls")),

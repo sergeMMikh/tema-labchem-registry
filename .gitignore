@@ -2,8 +2,12 @@ __pycache__/
 *.py[cod]
 *.sqlite3
 .env
+.env.*
+!.env.example
 .venv/
 venv/
+*.sqlite3
+*.sqlite3.*
 .pytest_cache/
 .ruff_cache/
 .coverage
@@ -12,3 +16,4 @@ htmlcov/
 media/
 staticfiles/
 *.xlsx
+models/

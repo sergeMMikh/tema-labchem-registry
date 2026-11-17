@@ -47,6 +47,10 @@ O processo utiliza o mesmo serviço de pesquisa e a mesma base de dados Django d
 
 `SQLITE_PATH` em `.env` identifica a base SQLite existente, que não utiliza credenciais de servidor. As opções `POSTGRES_*` só selecionam PostgreSQL após configuração de credenciais reais e migração dos dados. As variáveis do sistema têm prioridade sobre `.env`.
 
+## Pesquisa de reagentes no WhatsApp
+
+Defina as variáveis `WHATSAPP_*` e `META_APP_SECRET` indicadas em `.env.example`, configure o webhook da Meta com `WHATSAPP_WEBHOOK_URL` e subscreva o campo `messages` da conta WhatsApp Business. O texto aceita `/start`, `/help`, `/search`, `/pesquisar`, nomes, CAS, fórmulas e fabricantes. Vários resultados aparecem numa lista com seleção e paginação; um resultado mostra logo as embalagens disponíveis e localizações. A resposta inclui a ligação SDS quando existe. `/pt`, `/en` e `/auto` selecionam o idioma da pesquisa por voz. A voz usa o mesmo modelo local e o limite de 30 segundos / 5 MB do Telegram. `WHATSAPP_ALLOWED_USER_IDS` vazio permite qualquer remetente; caso contrário, introduza números separados por vírgulas. O bot apenas consulta o inventário. As páginas expiram após uma hora ou reinício do processo webhook.
+
 ## Testes e lint
 
 ```powershell
@@ -137,6 +141,31 @@ A base de dados principal deverá permanecer na infraestrutura interna. Apenas a
 
 A arquitetura deverá permitir a adoção futura de identificadores internos e códigos QR, embora estes não façam parte da primeira versão obrigatória.
 
-## Licença
+## Pesquisa por voz no Telegram (português / inglês)
+
+Instalação única no ambiente virtual ativado:
+
+```powershell
+pip install -r requirements-voice.txt
+python manage.py setup_voice
+```
+
+Defina `TELEGRAM_VOICE_ENABLED=1` e `TELEGRAM_VOICE_MODEL=models/whisper-small` no `.env`.
+Reinicie `python manage.py run_telegram_bot` (apenas um processo por token).
+Envie uma mensagem de voz até 30 segundos / 5 MB numa conversa privada.
+O bot apresenta a transcrição, pesquisa os sinónimos existentes e mostra os reagentes
+e as suas localizações. Diga o nome do reagente, sem uma pergunta completa.
+Use `/pt` ou `/en` para nomes curtos; `/auto` repõe a deteção automática (predefinição).
+A preferência de idioma é reposta ao reiniciar o bot.
+
+O reconhecimento usa o modelo multilingue local faster-whisper no CPU, sem API externa
+de transcrição. A transferência inicial do modelo necessita de internet; o reconhecimento não.
+O Telegram continua a necessitar de internet e recebe as mensagens de voz. O áudio é
+processado em memória, sem gravação na base de dados ou em disco. A pesquisa não usa LLM.
+Se houver erros, envie texto; confirme sempre o nome químico e o CAS apresentados.
+O processamento de voz é sequencial e pode atrasar outras pesquisas durante a transcrição.
+Os testes de voz requerem `requirements-voice.txt`; execute `pytest` e `ruff check .`.
+
+## Estado da licença
 
 Ainda não foi definida uma licença.

@@ -47,6 +47,10 @@ The worker uses the same Django search service and database as the website. It p
 
 `SQLITE_PATH` in `.env` points to the existing SQLite database. SQLite has no server login/password. The optional `POSTGRES_*` settings select PostgreSQL only after real connection credentials and a data migration are provided. System environment variables take precedence over `.env`.
 
+## WhatsApp reagent search
+
+Set the `WHATSAPP_*` and `META_APP_SECRET` variables shown in `.env.example`, then configure the Meta webhook callback to `WHATSAPP_WEBHOOK_URL` and subscribe the app to the WABA `messages` field. Incoming text supports `/start`, `/help`, `/search`, `/pesquisar`, names, CAS numbers, formulas and manufacturers. Multiple matches appear as a WhatsApp list with selection and pagination; one match shows its available packages and locations immediately. Results include the SDS link when present. `/pt`, `/en` and `/auto` control voice recognition language. Voice search uses the same local model and 30-second / 5-MB limit as Telegram. Empty `WHATSAPP_ALLOWED_USER_IDS` allows any sender; otherwise enter comma-separated phone numbers. The bot only reads inventory. Search pages expire after one hour or a webhook process restart.
+
 ## Tests and lint
 
 ```powershell
@@ -137,6 +141,31 @@ The primary database must remain within the institution's internal infrastructur
 
 The architecture should support future internal identifiers and QR codes, although they are not mandatory for the first release.
 
-## License
+## Local Telegram voice search (English / Portuguese)
+
+One-time installation in the activated virtual environment:
+
+```powershell
+pip install -r requirements-voice.txt
+python manage.py setup_voice
+```
+
+Set `TELEGRAM_VOICE_ENABLED=1` and `TELEGRAM_VOICE_MODEL=models/whisper-small` in `.env`,
+then restart `python manage.py run_telegram_bot` (only one worker per token).
+Send a voice message of up to 30 seconds / 5 MB in a private chat.
+The bot displays the transcript, searches existing synonyms and shows matching reagents
+and their locations. Say the reagent name, without a full question.
+Use `/pt` or `/en` for short names; `/auto` restores language detection (default).
+The language preference resets when the worker restarts.
+
+Speech recognition uses a local multilingual faster-whisper model on CPU, not an external
+transcription API. The initial model download needs internet; inference does not.
+Telegram itself still requires internet and receives your voice messages. Audio is decoded
+in memory, not saved to the database or disk. Text search does not use an LLM.
+If recognition fails, send text; always check the displayed chemical name and CAS.
+Voice processing is sequential and can delay other requests while a clip is processed.
+The optional voice tests require `requirements-voice.txt`; run `pytest` and `ruff check .`.
+
+## License status
 
 No license has been defined yet.
