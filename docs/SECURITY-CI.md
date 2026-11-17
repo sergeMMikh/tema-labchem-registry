@@ -6,6 +6,8 @@ The pipeline follows `E:\git_prog\xps-journal\.gitlab-ci.yml`. The project instr
 
 Every branch push and merge request runs `.gitlab-ci.yml`; open merge requests suppress duplicate branch pipelines. Jobs use the assigned project runners: `build, docker` for lint/tests/image and `security, sast` for security scans and the gateway. No production credentials, database, SSH access or deployment are required. Docker-in-Docker builds a disposable image for scanning; the image is neither published nor deployed. The existing XPS S3 connectivity job is omitted because this project has no corresponding S3 requirement.
 
+The project runners are protected: build runner `55993747`, SAST runner `56080538`, and DAST runner `56080583`. Only protected refs are eligible to use them. `main` is protected, push/merge requires Maintainer and force pushes are disabled. Instance/shared runners are disabled for this project. Pipelines on unprotected feature branches remain pending until a Maintainer protects the ref or runs the changes on `main`; do not disable runner protection to clear the queue. The DAST runner is reserved for future explicitly configured live-site scans and is not used by this static/image pipeline.
+
 | Check | Purpose |
 | --- | --- |
 | Ruff | Python errors and unused imports |
