@@ -12,3 +12,5 @@ Start-ScheduledTask -TaskName 'TEMA LabChem Registry Web 8080'
 ```
 
 The service listens on all IPv4 interfaces, but Windows Firewall can still block inbound traffic. This workstation's Public profile accepts only group-policy rules. Direct HTTP traffic is unencrypted; do not expose this service to an untrusted network.
+
+If Firefox shows `SSL_ERROR_RX_RECORD_TOO_LONG` for port 8080, it is trying HTTPS against this HTTP service. Enter the full `http://127.0.0.1:8080/` URL. If Firefox still upgrades it, open **Settings → Privacy & Security → HTTPS-Only Mode → Manage Exceptions**, add `http://127.0.0.1:8080/`, select **Turn Off**, and save. Add the network address separately if needed. Firefox's HTTPS-First mode honors these exceptions too.
