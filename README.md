@@ -23,6 +23,8 @@ Open `http://127.0.0.1:8766/`. The technical administration interface is availab
 
 Local settings are loaded from `.env`. The supplied development file uses `DJANGO_ALLOWED_HOSTS=*`; copy `.env.example` when preparing another environment. Restart the Django server after changing environment variables.
 
+This Windows workstation's network service: [local web setup](docs/LOCAL-WEB.md) · [Português](docs/LOCAL-WEB.pt.md) · [Русский](docs/LOCAL-WEB.ru.md).
+
 To import or refresh an XLSX workbook:
 
 ```powershell

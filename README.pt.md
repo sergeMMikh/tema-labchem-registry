@@ -23,6 +23,8 @@ Abra `http://127.0.0.1:8766/`. A administração técnica está disponível em `
 
 As definições locais são carregadas a partir de `.env`. O ficheiro de desenvolvimento fornecido utiliza `DJANGO_ALLOWED_HOSTS=*`; copie `.env.example` ao preparar outro ambiente. Reinicie o servidor Django após alterar variáveis de ambiente.
 
+Serviço de rede desta estação Windows: [configuração web local](docs/LOCAL-WEB.pt.md) · [English](docs/LOCAL-WEB.md) · [Русский](docs/LOCAL-WEB.ru.md).
+
 Para importar ou atualizar um ficheiro XLSX:
 
 ```powershell
