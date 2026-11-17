@@ -4,6 +4,6 @@
 @media(max-width:650px){.topbar{height:62px;padding:0 14px}.brand small,.brand>span:nth-child(2)>strong{display:none}.brand{margin-right:auto}.top-actions{margin:0;gap:8px}.user-chip{display:none}.content{padding:22px 14px}.page-header{align-items:stretch;flex-direction:column}.filter-panel,.form-grid{grid-template-columns:1fr}.filter-panel .button{width:100%}.table-scroll table{min-width:780px}.drawer{top:62px;height:calc(100vh - 62px)}.drawer-backdrop{inset:62px 0 0}.detail-grid{display:block}.detail-grid .panel{margin-bottom:14px}.details{grid-template-columns:110px 1fr}.attention-item{grid-template-columns:1fr}.stat-grid{grid-template-columns:1fr 1fr}.record-header{align-items:flex-start}.qr-placeholder{width:66px;height:66px}.panel{padding:18px}}
 
 .sidebar-logo{width:100%;max-width:194px;aspect-ratio:1;margin:0 auto 22px;overflow:hidden;border-radius:22%}
-/* Crop the black canvas to the rounded outline of the supplied logo. */
-.sidebar-logo img{display:block;width:112%;max-width:none;height:auto;transform:translate(-5%,-6%)}
+/* Crop the canvas to the rounded outline of the supplied badge. */
+.sidebar-logo img{display:block;width:108%;max-width:none;height:auto;transform:translate(-4%,-5%)}
 .sidebar .sidebar-logo+.eyebrow{margin-top:0}
