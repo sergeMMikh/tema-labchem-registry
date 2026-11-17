@@ -2,11 +2,21 @@ from io import BytesIO
 
 import pytest
 from django.urls import reverse
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 
 from inventory.models import Location, Package, Reagent, Supplier
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def synthetic_export_template(tmp_path, monkeypatch):
+    workbook = Workbook()
+    workbook.active.title = "Inventário 3.2.22"
+    workbook.active.append(["Name", "Formula", "Supplier", "CAS", "Quantity"])
+    template = tmp_path / "inventory_template.xlsx"
+    workbook.save(template)
+    monkeypatch.setattr("inventory.exports.EXPORT_TEMPLATE", template)
 
 
 def test_export_uses_source_sheets_and_adds_manual_packages(client):

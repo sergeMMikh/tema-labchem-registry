@@ -1,0 +1,179 @@
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    - if: '$CI_COMMIT_BRANCH'
+    - when: never
+
+stages:
+  - lint
+  - test
+  - sast
+  - secret-scan
+  - dependency-audit
+  - security-audit
+  - image-scan
+  - security-gateway
+
+lint:ruff:
+  stage: lint
+  tags: [saas-linux-small-amd64]
+  image: python:3.14-slim
+  script:
+    - python -m pip install --no-cache-dir ruff==0.15.20
+    - ruff check . --select E4,E7,E9,F
+
+test:inventory:
+  stage: test
+  tags: [saas-linux-small-amd64]
+  image: python:3.14-slim
+  variables:
+    DJANGO_SECRET_KEY: "ci-only-ephemeral-key-never-used-by-the-running-site"
+    DJANGO_DEBUG: "1"
+    DJANGO_ALLOWED_HOSTS: "*"
+  script:
+    - python -m pip install --no-cache-dir -r requirements-dev.txt -r requirements-voice.txt
+    - python -m pytest -q --junitxml=pytest-report.xml
+  artifacts:
+    when: always
+    reports:
+      junit: pytest-report.xml
+    paths:
+      - pytest-report.xml
+      - coverage.xml
+    expire_in: 1 week
+
+sast:bandit:
+  stage: sast
+  needs: []
+  tags: [saas-linux-small-amd64]
+  image: python:3.14-slim
+  script:
+    - python -m pip install --no-cache-dir bandit==1.8.6
+    - bandit -r config inventory scripts/ci -x inventory/tests,inventory/migrations -f json -o bandit-report.json || test -s bandit-report.json
+  artifacts:
+    when: always
+    access: developer
+    paths:
+      - bandit-report.json
+    expire_in: 1 week
+
+sast:semgrep:
+  stage: sast
+  needs: []
+  tags: [saas-linux-small-amd64]
+  image:
+    name: semgrep/semgrep:1.136.0
+    entrypoint: [""]
+  script:
+    - semgrep scan --config p/default --metrics=off --json --output semgrep-report.json .
+  artifacts:
+    when: always
+    access: developer
+    paths:
+      - semgrep-report.json
+    expire_in: 1 week
+
+security:trufflehog:
+  stage: secret-scan
+  needs: []
+  tags: [saas-linux-small-amd64]
+  image:
+    name: ghcr.io/trufflesecurity/trufflehog:latest
+    entrypoint: [""]
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - trufflehog git "file://$CI_PROJECT_DIR" --json --no-update > trufflehog-report.json
+  artifacts:
+    when: always
+    access: developer
+    paths:
+      - trufflehog-report.json
+    expire_in: 1 week
+
+security:pip-audit:
+  stage: dependency-audit
+  needs: []
+  tags: [saas-linux-small-amd64]
+  image: python:3.14-slim
+  script:
+    - python -m pip install --no-cache-dir pip-audit
+    - pip-audit -r requirements.txt -f json -o pip-audit-report.json || test -s pip-audit-report.json
+  artifacts:
+    when: always
+    access: developer
+    paths:
+      - pip-audit-report.json
+    expire_in: 1 week
+
+security:trivy-fs:
+  stage: security-audit
+  needs: []
+  tags: [saas-linux-small-amd64]
+  image:
+    name: aquasec/trivy:0.75.0
+    entrypoint: [""]
+  variables:
+    TRIVY_NO_PROGRESS: "true"
+  script:
+    - trivy fs --scanners vuln,misconfig,secret --format json --output trivy-fs-report.json .
+    - trivy config --format json --output trivy-config-report.json .
+  artifacts:
+    when: always
+    access: developer
+    paths:
+      - trivy-fs-report.json
+      - trivy-config-report.json
+    expire_in: 1 week
+
+# Build a disposable image in CI; do not push it or deploy it.
+security:trivy-image:
+  stage: image-scan
+  needs: []
+  tags: [saas-linux-small-amd64]
+  image: docker:27-cli
+  services:
+    - name: docker:27-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: "tcp://docker:2375"
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - docker build --pull -t "tema-labchem:$CI_COMMIT_SHORT_SHA" .
+    - docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.75.0 image --format json "tema-labchem:$CI_COMMIT_SHORT_SHA" > trivy-image-report.json
+  artifacts:
+    when: always
+    access: developer
+    paths:
+      - trivy-image-report.json
+    expire_in: 1 week
+
+security:gateway:
+  stage: security-gateway
+  tags: [saas-linux-small-amd64]
+  image: python:3.14-slim
+  needs:
+    - job: sast:bandit
+      artifacts: true
+    - job: sast:semgrep
+      artifacts: true
+    - job: security:trufflehog
+      artifacts: true
+    - job: security:pip-audit
+      artifacts: true
+    - job: security:trivy-fs
+      artifacts: true
+    - job: security:trivy-image
+      artifacts: true
+  script:
+    - python scripts/ci/security_gate.py
+  artifacts:
+    when: always
+    access: developer
+    paths:
+      - security-gateway-report.md
+      - security-gateway-report.json
+    expire_in: 1 week
+
