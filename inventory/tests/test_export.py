@@ -14,6 +14,7 @@ def synthetic_export_template(tmp_path, monkeypatch):
     workbook = Workbook()
     workbook.active.title = "Inventário 3.2.22"
     workbook.active.append(["Name", "Formula", "Supplier", "CAS", "Quantity"])
+    workbook.active.cell(10, 1).number_format = "@"
     template = tmp_path / "inventory_template.xlsx"
     workbook.save(template)
     monkeypatch.setattr("inventory.exports.EXPORT_TEMPLATE", template)
