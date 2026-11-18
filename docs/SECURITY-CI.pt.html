@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pipeline de segurança no GitLab</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202b33; background: #f3f6f7; }
+    body { max-width: 980px; margin: 2rem auto; padding: 2rem 2.5rem; background: white; line-height: 1.65; }
+    h1, h2, h3 { line-height: 1.25; color: #0d5967; margin-top: 1.6em; }
+    h1 { margin-top: 0; border-bottom: 1px solid #d9e2e5; padding-bottom: .5rem; }
+    a { color: #075bce; }
+    pre { overflow-x: auto; padding: 1rem; background: #f2f5f6; border-radius: 6px; }
+    code { font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2e5; padding: .5rem .7rem; text-align: left; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid #0d8394; color: #52646c; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 700px) { body { margin: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+<h1>Pipeline de segurança no GitLab</h1>
+<p><a href="SECURITY-CI.md">English</a> · <a href="SECURITY-CI.ru.md">Русский</a></p>
+<p>O pipeline segue <code>E:\git_prog\xps-journal\.gitlab-ci.yml</code>. As instruções desse projeto foram copiadas para <code>AGENTS.md</code> a pedido do utilizador.</p>
+<p>Cada push de um ramo e cada merge request executam <code>.gitlab-ci.yml</code>. Os merge requests abertos evitam pipelines duplicados. São utilizados runners do projeto: <code>build, docker</code> para lint/testes/imagem e <code>security, sast</code> para segurança e gateway. Não são necessárias credenciais de produção, base de dados, SSH ou implementação. Docker-in-Docker constrói uma imagem temporária para análise, sem publicação nem implementação. A verificação S3 do projeto XPS não se aplica a este projeto.</p>
+<p>Os runners do projeto estão protegidos: build <code>55993747</code>, SAST <code>56080538</code> e DAST <code>56080583</code>. Apenas referências protegidas podem utilizá-los. O ramo <code>main</code> está protegido; push/merge exigem Maintainer e force push está desativado. Os runners partilhados estão desativados neste projeto. Pipelines de ramos não protegidos ficam pendentes até um Maintainer proteger a referência ou executar as alterações em <code>main</code>; mantenha a proteção dos runners. O runner DAST fica reservado para futuras análises explicitamente configuradas do site e não é utilizado neste pipeline estático/de imagem.</p>
+<p>O pipeline executa Ruff, pytest com cobertura mínima de 85%, Bandit 1.9.4 compatível com Python 3.14, Semgrep (<code>p/default</code>), TruffleHog sobre todo o histórico Git, pip-audit e Trivy para ficheiros, configuração e imagem. O gateway reúne os relatórios de segurança.</p>
+<p>O gateway bloqueia segredos verificados, resultados HIGH ou erros de análise do Bandit, resultados HIGH ou CRITICAL do Trivy para ficheiros/imagem e relatórios JSON obrigatórios em falta ou inválidos. Tal como no projeto de referência, os resultados pip-audit, Semgrep e Trivy de configuração são apresentados para revisão. Falhas de execução das ferramentas continuam a falhar o respetivo job. Os artefactos são guardados durante uma semana; o acesso aos relatórios de segurança exige o papel Developer. Os testes publicam JUnit XML e coverage XML.</p>
+<p>No GitLab, abra <strong>Build → Pipelines</strong>, selecione o ramo e consulte os logs dos jobs com falha. Descarregue <code>security-gateway-report.md</code> e <code>.json</code> do job <code>security:gateway</code>. Um push inicia o pipeline; também é possível usar <code>POST /projects/:id/pipeline</code> com o ramo em <code>ref</code>.</p>
+<p>A automação API utiliza <code>GITLAB_TOKEN</code> com âmbito <code>api</code> no <code>.env</code> local ignorado pelo Git. O acesso depende do papel do token no projeto; CI Lint e administração de runners podem exigir Maintainer. Nunca inclua esse token nem credenciais WhatsApp/Meta de produção no CI. Os valores dos tokens não são impressos. <code>.dockerignore</code> exclui segredos, bases locais, folhas laboratoriais e modelos de voz do contexto Docker.</p>
+<p>Os testes de exportação criam um Excel sintético numa pasta temporária; o ficheiro real <code>inventory/data/inventory_export_template.xlsx</code> permanece local e ignorado. O CI instala as dependências opcionais de voz sem descarregar o modelo nem processar áudio real. Pillow foi atualizado de 12.3.0 para 13.0.0 após a auditoria de dependências.</p>
+<p>Para verificações locais, use <code>DJANGO_DEBUG=1</code>, <code>DJANGO_ALLOWED_HOSTS=*</code> e uma <code>DJANGO_SECRET_KEY</code> temporária apenas no terminal; execute <code>python -m pytest -q</code> e <code>python -m ruff check . --select E4,E7,E9,F</code>. Não altere o <code>.env</code> de produção para executar os testes.</p>
+</body>
+</html>

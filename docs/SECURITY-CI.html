@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GitLab security pipeline</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202b33; background: #f3f6f7; }
+    body { max-width: 980px; margin: 2rem auto; padding: 2rem 2.5rem; background: white; line-height: 1.65; }
+    h1, h2, h3 { line-height: 1.25; color: #0d5967; margin-top: 1.6em; }
+    h1 { margin-top: 0; border-bottom: 1px solid #d9e2e5; padding-bottom: .5rem; }
+    a { color: #075bce; }
+    pre { overflow-x: auto; padding: 1rem; background: #f2f5f6; border-radius: 6px; }
+    code { font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2e5; padding: .5rem .7rem; text-align: left; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid #0d8394; color: #52646c; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 700px) { body { margin: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+<h1>GitLab security pipeline</h1>
+<p><a href="SECURITY-CI.pt.md">Português</a> · <a href="SECURITY-CI.ru.md">Русский</a></p>
+<p>The pipeline follows <code>E:\git_prog\xps-journal\.gitlab-ci.yml</code>. The project instructions were copied to <code>AGENTS.md</code> at the user's request.</p>
+<p>Every branch push and merge request runs <code>.gitlab-ci.yml</code>; open merge requests suppress duplicate branch pipelines. Jobs use the assigned project runners: <code>build, docker</code> for lint/tests/image and <code>security, sast</code> for security scans and the gateway. No production credentials, database, SSH access or deployment are required. Docker-in-Docker builds a disposable image for scanning; the image is neither published nor deployed. The existing XPS S3 connectivity job is omitted because this project has no corresponding S3 requirement.</p>
+<p>The project runners are protected: build runner <code>55993747</code>, SAST runner <code>56080538</code>, and DAST runner <code>56080583</code>. Only protected refs are eligible to use them. <code>main</code> is protected, push/merge requires Maintainer and force pushes are disabled. Instance/shared runners are disabled for this project. Pipelines on unprotected feature branches remain pending until a Maintainer protects the ref or runs the changes on <code>main</code>; do not disable runner protection to clear the queue. The DAST runner is reserved for future explicitly configured live-site scans and is not used by this static/image pipeline.</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ruff</td>
+<td>Python errors and unused imports</td>
+</tr>
+<tr>
+<td>pytest</td>
+<td>Inventory, Telegram, WhatsApp and local voice regression tests; minimum coverage 85%</td>
+</tr>
+<tr>
+<td>Bandit</td>
+<td>Python security analysis; version 1.9.4 supports Python 3.14</td>
+</tr>
+<tr>
+<td>Semgrep</td>
+<td>Additional static analysis using <code>p/default</code></td>
+</tr>
+<tr>
+<td>TruffleHog</td>
+<td>Verified secret detection across Git history (<code>GIT_DEPTH=0</code>)</td>
+</tr>
+<tr>
+<td>pip-audit</td>
+<td>Published vulnerabilities in <code>requirements.txt</code></td>
+</tr>
+<tr>
+<td>Trivy filesystem/config/image</td>
+<td>Dependencies, secrets, configuration and the runtime image</td>
+</tr>
+<tr>
+<td>Security gateway</td>
+<td>Aggregate reports and enforce the policy below</td>
+</tr>
+</tbody>
+</table>
+<p>The gateway blocks verified secrets, Bandit HIGH findings or scanner errors, Trivy filesystem/image HIGH or CRITICAL findings, and missing or invalid required JSON reports. As in the reference project, pip-audit findings, Semgrep findings and Trivy configuration findings are reported for review. Scanner execution failures still fail their jobs. Reports are retained for one week; security artifact downloads require Developer access. Test reports are available as JUnit XML and coverage XML.</p>
+<p>In GitLab, open <strong>Build → Pipelines</strong>, select the branch and inspect failed job logs. Download <code>security-gateway-report.md</code> and <code>.json</code> from <code>security:gateway</code> for the consolidated result. A push starts a pipeline; the API also supports <code>POST /projects/:id/pipeline</code> with a branch <code>ref</code>.</p>
+<p>API automation uses a local, ignored <code>.env</code> variable <code>GITLAB_TOKEN</code> with <code>api</code> scope. Project access tokens can read jobs and pipeline reports according to their project role; CI Lint or runner administration may require Maintainer permissions. Never commit this token or add production WhatsApp/Meta credentials to CI. Token values are not printed. <code>.dockerignore</code> also excludes secrets, local databases, lab workbooks and voice models from build context.</p>
+<p>Export tests generate a synthetic workbook in a temporary directory. The real <code>inventory/data/inventory_export_template.xlsx</code> stays local and ignored. CI installs optional voice dependencies, but never downloads the speech model or transcribes real audio. Pillow was upgraded from 12.3.0 to 13.0.0 following dependency audit recommendations.</p>
+<p>Local checks with development-only environment overrides:</p>
+<pre><code class="language-powershell">$env:DJANGO_DEBUG = '1'
+$env:DJANGO_ALLOWED_HOSTS = '*'
+$env:DJANGO_SECRET_KEY = 'ci-only-ephemeral-key'
+.\venv\Scripts\python.exe -m pytest -q
+.\venv\Scripts\python.exe -m ruff check . --select E4,E7,E9,F
+</code></pre>
+<p>These overrides apply only to the current terminal; do not change the running site's production <code>.env</code> settings.</p>
+</body>
+</html>

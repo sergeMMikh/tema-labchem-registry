@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local network web interface (Windows workstation)</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202b33; background: #f3f6f7; }
+    body { max-width: 980px; margin: 2rem auto; padding: 2rem 2.5rem; background: white; line-height: 1.65; }
+    h1, h2, h3 { line-height: 1.25; color: #0d5967; margin-top: 1.6em; }
+    h1 { margin-top: 0; border-bottom: 1px solid #d9e2e5; padding-bottom: .5rem; }
+    a { color: #075bce; }
+    pre { overflow-x: auto; padding: 1rem; background: #f2f5f6; border-radius: 6px; }
+    code { font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2e5; padding: .5rem .7rem; text-align: left; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid #0d8394; color: #52646c; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 700px) { body { margin: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+<h1>Local network web interface (Windows workstation)</h1>
+<p>The workstation's <code>TEMA LabChem Registry Web 8080</code> scheduled task runs <code>scripts/windows/run_registry_web_http.ps1</code> at sign-in. It binds to <code>0.0.0.0:8080</code>, so the application is available at <code>http://127.0.0.1:8080/</code> on the workstation and at <code>http://192.168.1.7:8080/</code> from reachable networks. The local Caddy HTTPS proxy is stopped; port 8080 uses HTTP.</p>
+<p>The script uses <code>config.settings_local_http</code>, which keeps <code>DEBUG=False</code>, accepts Host headers for all addresses, and disables HTTPS redirects and secure-only cookies for this HTTP service. Django's <code>--insecure</code> option serves CSS and JavaScript with <code>DEBUG=False</code>. Do not use these settings for an internet-facing deployment.</p>
+<p>To restart the task after changing the code or <code>.env</code>:</p>
+<pre><code class="language-powershell">Stop-ScheduledTask -TaskName 'TEMA LabChem Registry Web 8080'
+Start-ScheduledTask -TaskName 'TEMA LabChem Registry Web 8080'
+</code></pre>
+<p>The service listens on all IPv4 interfaces, but Windows Firewall can still block inbound traffic. This workstation's Public profile accepts only group-policy rules. Direct HTTP traffic is unencrypted; do not expose this service to an untrusted network.</p>
+<p>If Firefox shows <code>SSL_ERROR_RX_RECORD_TOO_LONG</code> for port 8080, it is trying HTTPS against this HTTP service. Enter the full <code>http://127.0.0.1:8080/</code> URL. If Firefox still upgrades it, open <strong>Settings → Privacy &amp; Security → HTTPS-Only Mode → Manage Exceptions</strong>, add <code>http://127.0.0.1:8080/</code>, select <strong>Turn Off</strong>, and save. Add the network address separately if needed. Firefox's HTTPS-First mode honors these exceptions too.</p>
+</body>
+</html>

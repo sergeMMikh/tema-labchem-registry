@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Веб-интерфейс в локальной сети (Windows)</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202b33; background: #f3f6f7; }
+    body { max-width: 980px; margin: 2rem auto; padding: 2rem 2.5rem; background: white; line-height: 1.65; }
+    h1, h2, h3 { line-height: 1.25; color: #0d5967; margin-top: 1.6em; }
+    h1 { margin-top: 0; border-bottom: 1px solid #d9e2e5; padding-bottom: .5rem; }
+    a { color: #075bce; }
+    pre { overflow-x: auto; padding: 1rem; background: #f2f5f6; border-radius: 6px; }
+    code { font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2e5; padding: .5rem .7rem; text-align: left; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid #0d8394; color: #52646c; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 700px) { body { margin: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+<h1>Веб-интерфейс в локальной сети (Windows)</h1>
+<p>Задание Windows <code>TEMA LabChem Registry Web 8080</code> при входе в систему запускает <code>scripts/windows/run_registry_web_http.ps1</code>. Сервер слушает <code>0.0.0.0:8080</code>: на этом компьютере открывайте <code>http://127.0.0.1:8080/</code>, а из доступных сетей — <code>http://192.168.1.7:8080/</code>. Локальный HTTPS-прокси Caddy остановлен; порт 8080 работает по HTTP.</p>
+<p>Скрипт использует <code>config.settings_local_http</code>: <code>DEBUG=False</code> сохраняется, адреса в заголовке Host принимаются без ограничений, а перенаправление на HTTPS и требование HTTPS для cookie отключены только для этого HTTP-сервиса. Параметр Django <code>--insecure</code> отдаёт CSS и JavaScript при <code>DEBUG=False</code>. Эти настройки не предназначены для публикации приложения в интернете.</p>
+<p>После изменения кода или <code>.env</code> перезапустите задание:</p>
+<pre><code class="language-powershell">Stop-ScheduledTask -TaskName 'TEMA LabChem Registry Web 8080'
+Start-ScheduledTask -TaskName 'TEMA LabChem Registry Web 8080'
+</code></pre>
+<p>Сервер слушает все IPv4-интерфейсы, но Windows Firewall может блокировать входящие соединения. Для профиля Public на этой машине действуют только правила групповой политики. HTTP-трафик не шифруется; не открывайте этот сервис в недоверенных сетях.</p>
+<p>Если Firefox показывает <code>SSL_ERROR_RX_RECORD_TOO_LONG</code> на порту 8080, браузер пытается открыть HTTP-сервис по HTTPS. Введите полный адрес <code>http://127.0.0.1:8080/</code>. Если Firefox всё равно переключает на HTTPS, откройте <strong>Настройки → Приватность и защита → Режим «Только HTTPS» → Управление исключениями</strong>, добавьте <code>http://127.0.0.1:8080/</code>, выберите <strong>Отключить</strong> и сохраните. Для сетевого адреса исключение добавляется отдельно. Режим HTTPS-First также учитывает эти исключения.</p>
+</body>
+</html>

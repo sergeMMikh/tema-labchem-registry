@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interface web na rede local (estação Windows)</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202b33; background: #f3f6f7; }
+    body { max-width: 980px; margin: 2rem auto; padding: 2rem 2.5rem; background: white; line-height: 1.65; }
+    h1, h2, h3 { line-height: 1.25; color: #0d5967; margin-top: 1.6em; }
+    h1 { margin-top: 0; border-bottom: 1px solid #d9e2e5; padding-bottom: .5rem; }
+    a { color: #075bce; }
+    pre { overflow-x: auto; padding: 1rem; background: #f2f5f6; border-radius: 6px; }
+    code { font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2e5; padding: .5rem .7rem; text-align: left; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid #0d8394; color: #52646c; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 700px) { body { margin: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+<h1>Interface web na rede local (estação Windows)</h1>
+<p>A tarefa agendada <code>TEMA LabChem Registry Web 8080</code> executa <code>scripts/windows/run_registry_web_http.ps1</code> ao iniciar sessão. O serviço escuta em <code>0.0.0.0:8080</code>: na própria estação, utilize <code>http://127.0.0.1:8080/</code>; nas redes alcançáveis, utilize <code>http://192.168.1.7:8080/</code>. O proxy HTTPS local Caddy foi parado; a porta 8080 usa HTTP.</p>
+<p>O script utiliza <code>config.settings_local_http</code>, que mantém <code>DEBUG=False</code>, aceita cabeçalhos Host para todos os endereços e desativa o redirecionamento HTTPS e os cookies exclusivos de HTTPS neste serviço HTTP. A opção <code>--insecure</code> do Django disponibiliza CSS e JavaScript com <code>DEBUG=False</code>. Não utilize estas definições numa instalação exposta à Internet.</p>
+<p>Para reiniciar a tarefa após alterar o código ou <code>.env</code>:</p>
+<pre><code class="language-powershell">Stop-ScheduledTask -TaskName 'TEMA LabChem Registry Web 8080'
+Start-ScheduledTask -TaskName 'TEMA LabChem Registry Web 8080'
+</code></pre>
+<p>O serviço escuta em todas as interfaces IPv4, mas o Windows Firewall pode bloquear ligações de entrada. O perfil Public desta estação só aceita regras definidas por política de grupo. O tráfego HTTP não é cifrado; não exponha este serviço a redes não fidedignas.</p>
+<p>Se o Firefox mostrar <code>SSL_ERROR_RX_RECORD_TOO_LONG</code> na porta 8080, está a tentar HTTPS num serviço HTTP. Introduza o endereço completo <code>http://127.0.0.1:8080/</code>. Se o Firefox continuar a atualizar a ligação, abra <strong>Definições → Privacidade e Segurança → Modo apenas HTTPS → Gerir exceções</strong>, adicione <code>http://127.0.0.1:8080/</code>, escolha <strong>Desativar</strong> e guarde. Adicione o endereço da rede separadamente, se necessário. O modo HTTPS-First também respeita estas exceções.</p>
+</body>
+</html>

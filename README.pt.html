@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LabChem Registry</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202b33; background: #f3f6f7; }
+    body { max-width: 980px; margin: 2rem auto; padding: 2rem 2.5rem; background: white; line-height: 1.65; }
+    h1, h2, h3 { line-height: 1.25; color: #0d5967; margin-top: 1.6em; }
+    h1 { margin-top: 0; border-bottom: 1px solid #d9e2e5; padding-bottom: .5rem; }
+    a { color: #075bce; }
+    pre { overflow-x: auto; padding: 1rem; background: #f2f5f6; border-radius: 6px; }
+    code { font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2e5; padding: .5rem .7rem; text-align: left; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid #0d8394; color: #52646c; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 700px) { body { margin: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+<h1>LabChem Registry</h1>
+<p><a href="README.md">English</a> · <strong>Português</strong></p>
+<p><a href="DATABASE_REQUIREMENTS.pt.md">Requisitos de conceção da base de dados</a></p>
+<p>Sistema de registo, pesquisa e localização de reagentes químicos para laboratórios, com acesso através de uma interface web na rede local e, futuramente, através de bots no Telegram e WhatsApp.</p>
+<blockquote>
+<p><strong>Estado do projeto:</strong> MVP implementado com os dados do inventário de 2026 importados. O OCR e os bots continuam previstos para fases posteriores.</p>
+</blockquote>
+<h2>Execução local</h2>
+<pre><code class="language-powershell">python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements-dev.txt
+python manage.py migrate
+python manage.py setup_roles
+python manage.py runserver 8766
+</code></pre>
+<p>Abra <code>http://127.0.0.1:8766/</code>. A administração técnica está disponível em <code>/admin/</code>. Crie o primeiro administrador com <code>python manage.py createsuperuser</code>.</p>
+<p>As definições locais são carregadas a partir de <code>.env</code>. O ficheiro de desenvolvimento fornecido utiliza <code>DJANGO_ALLOWED_HOSTS=*</code>; copie <code>.env.example</code> ao preparar outro ambiente. Reinicie o servidor Django após alterar variáveis de ambiente.</p>
+<p>Serviço de rede desta estação Windows: <a href="docs/LOCAL-WEB.pt.md">configuração web local</a> · <a href="docs/LOCAL-WEB.md">English</a> · <a href="docs/LOCAL-WEB.ru.md">Русский</a>.</p>
+<p>Para importar ou atualizar um ficheiro XLSX:</p>
+<pre><code class="language-powershell">python manage.py import_inventory --source &quot;C:\caminho\para\inventario.xlsx&quot;
+python manage.py import_sds_links --source &quot;C:\caminho\para\inventario.xlsx&quot;
+</code></pre>
+<p>O primeiro comando importa as linhas do inventário e é idempotente para o mesmo checksum. O segundo lê as hiperligações incorporadas nas células do Excel e associa os URLs reais das FDS aos reagentes importados. O PostgreSQL é ativado quando são definidas as variáveis <code>POSTGRES_*</code> apresentadas em <code>.env.example</code>; caso contrário, o desenvolvimento local utiliza SQLite.</p>
+<h2>Pesquisa de reagentes no Telegram</h2>
+<p>Defina <code>TELEGRAM_BOT_TOKEN</code> em <code>.env</code> e inicie um processo separado:</p>
+<pre><code class="language-powershell">.\venv\Scripts\python.exe manage.py run_telegram_bot --check
+.\venv\Scripts\python.exe manage.py run_telegram_bot
+</code></pre>
+<p>Numa conversa privada com o bot, envie <code>/start</code>, nome, CAS, fórmula, fabricante, referência de catálogo ou código de barras. Vários resultados são apresentados em botões com paginação. Após a seleção, o bot mostra as embalagens disponíveis e as localizações laboratório/armário/prateleira. Um único resultado mostra imediatamente as localizações. Embalagens abatidas, não encontradas, por rever ou reservadas são excluídas. A pesquisa utiliza fragmentos de texto, sem correção de erros ortográficos. As respostas têm legendas PT/EN.</p>
+<p>O processo utiliza o mesmo serviço de pesquisa e a mesma base de dados Django do site. Consulta a <a href="https://core.telegram.org/bots/api#getupdates">API do Telegram</a> por HTTPS, sem exigir uma porta web pública. Execute apenas um processo por token e pare-o com Ctrl+C. A paginação expira após uma hora ou reinício. <code>TELEGRAM_ALLOWED_USER_IDS</code> vazio permite pesquisas de qualquer utilizador em conversas privadas; os grupos são ignorados. O bot não altera o inventário.</p>
+<p><code>SQLITE_PATH</code> em <code>.env</code> identifica a base SQLite existente, que não utiliza credenciais de servidor. As opções <code>POSTGRES_*</code> só selecionam PostgreSQL após configuração de credenciais reais e migração dos dados. As variáveis do sistema têm prioridade sobre <code>.env</code>.</p>
+<h2>Pesquisa de reagentes no WhatsApp</h2>
+<p>Defina as variáveis <code>WHATSAPP_*</code> e <code>META_APP_SECRET</code> indicadas em <code>.env.example</code>, configure o webhook da Meta com <code>WHATSAPP_WEBHOOK_URL</code> e subscreva o campo <code>messages</code> da conta WhatsApp Business. O texto aceita <code>/start</code>, <code>/help</code>, <code>/search</code>, <code>/pesquisar</code>, nomes, CAS, fórmulas e fabricantes. Vários resultados aparecem numa lista com seleção e paginação; um resultado mostra logo as embalagens disponíveis e localizações. A resposta inclui a ligação SDS quando existe. <code>/pt</code>, <code>/en</code> e <code>/auto</code> selecionam o idioma da pesquisa por voz. A voz usa o mesmo modelo local e o limite de 30 segundos / 5 MB do Telegram. <code>WHATSAPP_ALLOWED_USER_IDS</code> vazio permite qualquer remetente; caso contrário, introduza números separados por vírgulas. O bot apenas consulta o inventário. As páginas expiram após uma hora ou reinício do processo webhook.</p>
+<p>CI de segurança: <a href="docs/SECURITY-CI.pt.md">pipeline GitLab e política</a> · <a href="docs/SECURITY-CI.md">English</a> · <a href="docs/SECURITY-CI.ru.md">Русский</a>.</p>
+<h2>Testes e lint</h2>
+<pre><code class="language-powershell">.\venv\Scripts\python.exe -m pytest
+.\venv\Scripts\python.exe -m ruff check .
+.\venv\Scripts\python.exe -m ruff format --check .
+.\venv\Scripts\python.exe manage.py check
+</code></pre>
+<p>O pytest utiliza uma base de dados de testes isolada e gera <code>coverage.xml</code>. A cobertura exclui testes e migrações, com um mínimo de 85%. Os testes verificam permissões, operações de stock e rollback, formulários, páginas, pesquisa, parâmetros inválidos e importação local de XLSX sem acesso à rede. Se a porta 8766 estiver ocupada, utilize <code>python manage.py runserver 127.0.0.1:8767</code>.</p>
+<h2>Objetivo</h2>
+<p>O LabChem Registry centraliza o inventário de reagentes químicos da instituição numa única aplicação e base de dados alojadas na rede interna. Cada embalagem ou unidade física é registada individualmente, permitindo encontrá-la pela respetiva identificação e localização.</p>
+<h2>Funcionalidades previstas</h2>
+<ul>
+<li>Pesquisa por nome completo ou parcial, número CAS, fabricante, referência de catálogo ou laboratório.</li>
+<li>Localização física no formato <strong>laboratório → armário → prateleira</strong>.</li>
+<li>Registo manual de novos reagentes.</li>
+<li>Registo por fotografia do rótulo, com extração preliminar de dados.</li>
+<li>Confirmação e correção obrigatórias dos dados reconhecidos antes de guardar.</li>
+<li>Edição de fichas de acordo com as permissões do utilizador.</li>
+<li>Movimentação de reagentes entre localizações.</li>
+<li>Abate de unidades consumidas ou indisponíveis, sem eliminar o respetivo registo.</li>
+<li>Identificação por fotografia para localizar uma ficha existente antes do abate.</li>
+<li>Histórico das operações relevantes.</li>
+<li>Acesso por interface web, bot Telegram e bot WhatsApp através do mesmo backend.</li>
+</ul>
+<p>O sistema não controla consumos parciais nem a quantidade restante de uma embalagem.</p>
+<h2>Ficha do reagente</h2>
+<p>Cada unidade física terá uma ficha própria com os seguintes dados:</p>
+<ul>
+<li>nome;</li>
+<li>número CAS, quando disponível;</li>
+<li>fabricante;</li>
+<li>referência ou número de catálogo, quando disponível;</li>
+<li>concentração, pureza ou grau, quando aplicável;</li>
+<li>laboratório, armário e prateleira;</li>
+<li>fotografia do rótulo;</li>
+<li>estado;</li>
+<li>observações adicionais.</li>
+</ul>
+<p>Os campos obrigatórios serão limitados ao necessário para identificar e localizar o reagente.</p>
+<h2>Regras essenciais</h2>
+<ul>
+<li>A pesquisa normal apresenta apenas reagentes disponíveis.</li>
+<li>O reconhecimento de um rótulo nunca cria definitivamente uma ficha sem confirmação humana.</li>
+<li>No processo de abate, o reconhecimento procura uma unidade já registada; não cria uma nova.</li>
+<li>O abate altera o estado da unidade, preservando a ficha e o histórico.</li>
+<li>As alterações à base de dados ficam associadas ao utilizador responsável.</li>
+</ul>
+<h2>Utilizadores e permissões</h2>
+<p>Estão previstos três perfis iniciais:</p>
+<ul>
+<li><strong>Utilizador:</strong> consulta e operações correntes autorizadas.</li>
+<li><strong>Responsável de laboratório:</strong> gestão dos reagentes e localizações sob a sua responsabilidade.</li>
+<li><strong>Administrador:</strong> gestão de utilizadores, laboratórios e dados de referência.</li>
+</ul>
+<p>A matriz final de permissões será definida durante a fase de projeto.</p>
+<h2>Arquitetura prevista</h2>
+<pre><code class="language-text">Interface web ─┐
+Bot Telegram ──┼── API/backend comum ── PostgreSQL na rede interna
+Bot WhatsApp ──┘          │
+                          ├── reconhecimento de rótulos
+                          ├── autenticação e permissões
+                          └── histórico de operações
+</code></pre>
+<p>A base de dados principal deverá permanecer na infraestrutura interna. Apenas as comunicações necessárias ao funcionamento dos serviços Telegram e WhatsApp serão externas.</p>
+<h2>Fases propostas</h2>
+<ol>
+<li>Modelação dos dados, API, utilizadores e localizações.</li>
+<li>Implementação da base de dados e do backend local.</li>
+<li>Desenvolvimento da interface web para a rede local.</li>
+<li>Integração do bot Telegram.</li>
+<li>Reconhecimento de rótulos através de fotografia.</li>
+<li>Integração do bot WhatsApp.</li>
+<li>Testes em laboratório, ajustes e entrada em produção.</li>
+</ol>
+<p>A arquitetura deverá permitir a adoção futura de identificadores internos e códigos QR, embora estes não façam parte da primeira versão obrigatória.</p>
+<h2>Pesquisa por voz no Telegram (português / inglês)</h2>
+<p>Instalação única no ambiente virtual ativado:</p>
+<pre><code class="language-powershell">pip install -r requirements-voice.txt
+python manage.py setup_voice
+</code></pre>
+<p>Defina <code>TELEGRAM_VOICE_ENABLED=1</code> e <code>TELEGRAM_VOICE_MODEL=models/whisper-small</code> no <code>.env</code>.
+Reinicie <code>python manage.py run_telegram_bot</code> (apenas um processo por token).
+Envie uma mensagem de voz até 30 segundos / 5 MB numa conversa privada.
+O bot apresenta a transcrição, pesquisa os sinónimos existentes e mostra os reagentes
+e as suas localizações. Diga o nome do reagente, sem uma pergunta completa.
+Use <code>/pt</code> ou <code>/en</code> para nomes curtos; <code>/auto</code> repõe a deteção automática (predefinição).
+A preferência de idioma é reposta ao reiniciar o bot.</p>
+<p>O reconhecimento usa o modelo multilingue local faster-whisper no CPU, sem API externa
+de transcrição. A transferência inicial do modelo necessita de internet; o reconhecimento não.
+O Telegram continua a necessitar de internet e recebe as mensagens de voz. O áudio é
+processado em memória, sem gravação na base de dados ou em disco. A pesquisa não usa LLM.
+Se houver erros, envie texto; confirme sempre o nome químico e o CAS apresentados.
+O processamento de voz é sequencial e pode atrasar outras pesquisas durante a transcrição.
+Os testes de voz requerem <code>requirements-voice.txt</code>; execute <code>pytest</code> e <code>ruff check .</code>.</p>
+<h2>Estado da licença</h2>
+<p>Ainda não foi definida uma licença.</p>
+</body>
+</html>

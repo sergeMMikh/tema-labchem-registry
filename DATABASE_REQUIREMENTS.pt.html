@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Requisitos de conceção da base de dados</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202b33; background: #f3f6f7; }
+    body { max-width: 980px; margin: 2rem auto; padding: 2rem 2.5rem; background: white; line-height: 1.65; }
+    h1, h2, h3 { line-height: 1.25; color: #0d5967; margin-top: 1.6em; }
+    h1 { margin-top: 0; border-bottom: 1px solid #d9e2e5; padding-bottom: .5rem; }
+    a { color: #075bce; }
+    pre { overflow-x: auto; padding: 1rem; background: #f2f5f6; border-radius: 6px; }
+    code { font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2e5; padding: .5rem .7rem; text-align: left; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid #0d8394; color: #52646c; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 700px) { body { margin: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+<h1>Requisitos de conceção da base de dados</h1>
+<p><a href="DATABASE_REQUIREMENTS.md">English</a> · <strong>Português</strong></p>
+<p>Este documento define os requisitos de conceção e formatação de dados do LabChem Registry. Baseia-se na análise do ficheiro <a href="https://uapt33090-my.sharepoint.com/:x:/g/personal/lrocha_ua_pt/IQAWNeX4mo45S6fXA5kON1MQAeEI0trkb8UDvVU3lHDq-_Q?e=ttVMRJ">2026 Todos labs TEMA.xlsx</a>, consultado em 21 de setembro de 2026, e nos requisitos do projeto.</p>
+<h2>1. Observações sobre o ficheiro de origem</h2>
+<p>O ficheiro contém dez folhas com reagentes gerais, garrafas de gás, laboratórios individuais, armários e itens que não foram encontrados. Os dados não deverão ser copiados diretamente para uma tabela de produção porque:</p>
+<ul>
+<li>campos equivalentes têm nomes diferentes, como <code>Name</code>/<code>Nome</code>, <code>Supplier</code>, <code>Storage</code>, <code>Localização</code>, <code>Link to SDS</code> e <code>Link to MSDS</code>;</li>
+<li>algumas folhas contêm várias tabelas independentes e cabeçalhos repetidos;</li>
+<li>títulos, legendas, datas de levantamento e notas operacionais aparecem entre as linhas de dados;</li>
+<li>as datas são números do Excel, texto formatado ou <code>?</code>;</li>
+<li>as quantidades combinam números, unidades, contagens e comentários no mesmo valor;</li>
+<li>o estado, a validade, a pureza e os comentários aparecem por vezes no nome do reagente;</li>
+<li>as localizações são texto livre e nem sempre separam laboratório, armário e prateleira;</li>
+<li>o mesmo produto químico pode existir em várias embalagens físicas, mas estas não têm um identificador comum estável;</li>
+<li>os valores CAS contêm espaços iniciais, valores em falta e pelo menos um valor que aparenta ser outro identificador;</li>
+<li>as garrafas de gás exigem atributos que não são usados de forma consistente nos restantes reagentes.</li>
+</ul>
+<p>O ficheiro é, por isso, uma fonte de migração e não o modelo da base de dados de destino.</p>
+<h2>2. Princípios gerais</h2>
+<ol>
+<li>Utilizar PostgreSQL como base de dados principal na rede interna da instituição.</li>
+<li>Criar um registo por embalagem física ou garrafa de gás.</li>
+<li>Separar a identidade química da unidade física de inventário.</li>
+<li>Normalizar laboratórios, armários e prateleiras, em vez de guardar a localização completa como texto livre.</li>
+<li>Utilizar identificadores internos imutáveis; nomes, números CAS e linhas da folha de cálculo não podem ser chaves primárias.</li>
+<li>Preservar os valores originais importados para rastreabilidade e guardar separadamente os valores normalizados.</li>
+<li>Não eliminar fisicamente registos de inventário ou de auditoria nos fluxos normais da aplicação.</li>
+<li>Guardar timestamps em UTC e apresentá-los no fuso horário do utilizador.</li>
+<li>Guardar estados e unidades controlados como códigos, e não como texto traduzido.</li>
+<li>Aplicar as regras de acesso no backend/API, e não apenas na interface.</li>
+</ol>
+<h2>3. Modelo de dados obrigatório</h2>
+<h3>3.1 Produto químico</h3>
+<p>Representa uma identidade química partilhada por uma ou mais unidades de inventário.</p>
+<table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Tipo</th>
+<th>Requisito</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>Chave primária gerada pelo sistema</td>
+</tr>
+<tr>
+<td><code>preferred_name</code></td>
+<td>texto</td>
+<td>Obrigatório, sem espaços exteriores</td>
+</tr>
+<tr>
+<td><code>formula</code></td>
+<td>texto</td>
+<td>Opcional; preservar maiúsculas e notação química</td>
+</tr>
+<tr>
+<td><code>cas_number</code></td>
+<td>texto</td>
+<td>Opcional; normalizado como <code>N{2,7}-NN-N</code> e com dígito de controlo validado</td>
+</tr>
+<tr>
+<td><code>physical_state</code></td>
+<td>código</td>
+<td>Opcional: sólido, líquido, gás, mistura, outro ou desconhecido</td>
+</tr>
+<tr>
+<td><code>notes</code></td>
+<td>texto</td>
+<td>Opcional; não substitui campos estruturados</td>
+</tr>
+</tbody>
+</table>
+<p>Os nomes alternativos deverão ser guardados numa tabela <code>chemical_alias</code>. A ausência de número CAS é permitida. O CAS não deverá ser considerado universalmente único, devido a misturas e exceções de qualidade; possíveis duplicados deverão ser revistos durante a importação.</p>
+<h3>3.2 Unidade de inventário</h3>
+<p>Representa uma embalagem, recipiente ou garrafa física.</p>
+<table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Tipo</th>
+<th>Requisito</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>UUID</td>
+<td>Chave primária e futuro valor do código QR</td>
+</tr>
+<tr>
+<td><code>chemical_id</code></td>
+<td>UUID</td>
+<td>Chave estrangeira obrigatória para <code>chemical</code></td>
+</tr>
+<tr>
+<td><code>manufacturer_id</code></td>
+<td>UUID</td>
+<td>Chave estrangeira opcional</td>
+</tr>
+<tr>
+<td><code>catalog_number</code></td>
+<td>texto</td>
+<td>Opcional; guardado como texto</td>
+</tr>
+<tr>
+<td><code>lot_number</code></td>
+<td>texto</td>
+<td>Opcional</td>
+</tr>
+<tr>
+<td><code>concentration_or_grade</code></td>
+<td>texto</td>
+<td>Opcional</td>
+</tr>
+<tr>
+<td><code>nominal_quantity</code></td>
+<td>decimal</td>
+<td>Opcional; deve ser positiva</td>
+</tr>
+<tr>
+<td><code>quantity_unit</code></td>
+<td>código</td>
+<td>Obrigatório quando existe quantidade nominal</td>
+</tr>
+<tr>
+<td><code>container_count</code></td>
+<td>inteiro</td>
+<td>Valor predefinido 1; positivo</td>
+</tr>
+<tr>
+<td><code>expiry_date</code></td>
+<td>data</td>
+<td>Opcional; não inventar dia ou mês</td>
+</tr>
+<tr>
+<td><code>location_id</code></td>
+<td>UUID</td>
+<td>Obrigatório enquanto a unidade estiver disponível</td>
+</tr>
+<tr>
+<td><code>responsible_user_id</code></td>
+<td>UUID</td>
+<td>Chave estrangeira opcional</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>código</td>
+<td>Obrigatório; predefinição <code>available</code></td>
+</tr>
+<tr>
+<td><code>label_photo_id</code></td>
+<td>UUID</td>
+<td>Referência opcional aos metadados da imagem</td>
+</tr>
+<tr>
+<td><code>notes</code></td>
+<td>texto</td>
+<td>Opcional</td>
+</tr>
+<tr>
+<td><code>created_at</code>, <code>updated_at</code></td>
+<td>timestamp</td>
+<td>Obrigatórios e geridos pelo sistema</td>
+</tr>
+</tbody>
+</table>
+<p>Os estados iniciais permitidos são <code>available</code>, <code>retired</code>, <code>not_found</code> e <code>pending_review</code>. Outros estados exigem uma migração explícita e um significado funcional documentado.</p>
+<p>O controlo de consumo parcial e da quantidade restante não pertence ao âmbito da primeira versão. Valores como <code>Estimated quantity left</code> deverão ser preservados nos dados de origem da migração ou em notas, mas não deverão alimentar cálculos de stock atuais.</p>
+<h3>3.3 Extensão para garrafas de gás</h3>
+<p>Os dados específicos dos gases deverão ficar num registo <code>gas_cylinder</code>, associado numa relação de zero-ou-um para um com a unidade de inventário:</p>
+<ul>
+<li>referência da garrafa ou do fornecedor;</li>
+<li>mistura/composição do gás, quando a ficha química não for suficiente;</li>
+<li>indicador de necessidade de substituição;</li>
+<li>notas específicas da garrafa.</li>
+</ul>
+<p>Uma garrafa de gás continua a ser uma unidade de inventário e segue as mesmas regras de estado, localização e auditoria.</p>
+<h3>3.4 Hierarquia de localizações</h3>
+<p>As localizações deverão utilizar chaves estrangeiras explícitas:</p>
+<pre><code class="language-text">laboratório → armário/unidade de armazenamento → prateleira
+</code></pre>
+<ul>
+<li>O laboratório tem um código institucional único, como <code>3.2.22</code>, e uma designação.</li>
+<li>Um armário pertence exatamente a um laboratório.</li>
+<li>Uma prateleira pertence exatamente a um armário.</li>
+<li>Os códigos são únicos dentro da localização hierarquicamente superior.</li>
+<li>Poderá existir uma localização temporária para importações <code>pending_review</code> ou <code>not_found</code>.</li>
+<li>Descrições como “armário de extração de vapores” são atributos da unidade de armazenamento, não texto do nome do reagente.</li>
+</ul>
+<p>Não é necessário numerar posições individuais dentro de uma prateleira.</p>
+<h3>3.5 Fabricantes e documentos de segurança</h3>
+<p>Os fabricantes/fornecedores deverão ser normalizados para evitar entidades duplicadas causadas por variantes ortográficas. O texto original deverá continuar disponível durante a importação.</p>
+<p>As Fichas de Dados de Segurança deverão ser guardadas numa tabela <code>safety_document</code> com:</p>
+<ul>
+<li>identificador interno;</li>
+<li>associação ao produto químico ou à unidade de inventário;</li>
+<li>URL de origem ou referência do ficheiro gerido;</li>
+<li>idioma;</li>
+<li>data de revisão/entrada em vigor, quando conhecida;</li>
+<li>tipo de documento (<code>SDS</code> ou o antigo <code>MSDS</code>);</li>
+<li>timestamp de criação.</li>
+</ul>
+<p>Não deverá ser guardado apenas o título de uma hiperligação sem o respetivo URL ou ficheiro.</p>
+<h3>3.6 Utilizadores e histórico de auditoria</h3>
+<p>O modelo deverá suportar os perfis <code>user</code>, <code>laboratory_manager</code> e <code>administrator</code>. Cada operação que altere o estado da base deverá criar um evento de auditoria apenas acrescentável, contendo:</p>
+<ul>
+<li>identificador do evento;</li>
+<li>identificador da unidade de inventário;</li>
+<li>identificador do utilizador ou de uma identidade própria de importação/serviço;</li>
+<li>tipo de evento;</li>
+<li>timestamp;</li>
+<li>valores estruturados anteriores e novos, quando aplicável;</li>
+<li>motivo ou comentário opcional.</li>
+</ul>
+<p>Deverão ser auditados, pelo menos, a adição, a edição da ficha, a alteração da localização e o abate. O abate altera o estado e não elimina o registo.</p>
+<h3>3.7 Reconhecimento de rótulos</h3>
+<p>O resultado de OCR ou IA deverá ser inicialmente guardado como rascunho associado à imagem e aos metadados do reconhecimento. Deverá incluir valores extraídos, níveis de confiança quando disponíveis, versão do modelo/serviço e timestamp do processamento. Um rascunho só se torna dado de produção após confirmação ou correção pelo utilizador.</p>
+<h2>4. Regras de formatação dos dados</h2>
+<ul>
+<li>Guardar texto em Unicode e remover espaços normais ou inquebráveis no início e no fim.</li>
+<li>Preservar acentos, maiúsculas e minúsculas das fórmulas químicas.</li>
+<li>Não acrescentar datas de validade, instruções de armazenamento ou comentários de estado ao nome.</li>
+<li>Guardar números CAS como texto, remover espaços exteriores, validar o formato e o dígito de controlo e encaminhar falhas para revisão.</li>
+<li>Guardar datas no formato ISO (<code>YYYY-MM-DD</code>); uma data desconhecida é <code>NULL</code>, nunca <code>?</code>.</li>
+<li>Quando apenas o ano ou o mês forem conhecidos, registar explicitamente a precisão sem inventar uma data completa.</li>
+<li>Separar a quantidade decimal da unidade controlada; valores como <code>2.5 L</code>, <code>10 g + 10 g</code> ou <code>30% | 50%</code> não deverão tornar-se valores calculáveis sem revisão.</li>
+<li>Utilizar ponto decimal internamente, independentemente do idioma da interface.</li>
+<li>Guardar referências de catálogo, lote, sala, armário, prateleira e garrafa como texto para preservar zeros iniciais e letras.</li>
+<li>Utilizar <code>NULL</code> para valores desconhecidos; strings vazias, traços e pontos de interrogação não são substitutos válidos.</li>
+<li>Colocar comentários operacionais em notas ou eventos de auditoria, não em campos de identidade.</li>
+<li>Tratar fotografias e documentos como objetos geridos; guardar metadados e referências na base de dados, e não ficheiros binários grandes, salvo decisão explícita da arquitetura de armazenamento.</li>
+</ul>
+<h2>5. Restrições e índices</h2>
+<p>A base de dados deverá aplicar chaves estrangeiras e restrições de validação. Deverá incluir, pelo menos, índices para:</p>
+<ul>
+<li>nome químico normalizado e nomes alternativos, incluindo pesquisa parcial;</li>
+<li>número CAS;</li>
+<li>fabricante e referência de catálogo;</li>
+<li>estado da unidade de inventário;</li>
+<li>laboratório, armário e prateleira;</li>
+<li>data de validade;</li>
+<li>eventos de auditoria por unidade e timestamp.</li>
+</ul>
+<p>Os possíveis duplicados deverão ser identificados através da combinação de produto químico, fabricante, referência de catálogo, lote, localização e linha de origem. A deteção deverá gerar um aviso ou uma revisão; nunca deverá fundir silenciosamente embalagens físicas.</p>
+<h2>6. Requisitos de migração da folha de cálculo</h2>
+<ol>
+<li>Importar cada folha para uma área de staging antes de criar registos de produção.</li>
+<li>Registar ficheiro, folha, linha, lote de importação e valores originais das células.</li>
+<li>Detetar e excluir títulos, legendas, linhas vazias e cabeçalhos repetidos dos registos de inventário.</li>
+<li>Mapear as variantes de colunas para o esquema canónico.</li>
+<li>Dividir valores incorporados apenas quando a transformação for determinística; nos restantes casos, solicitar revisão.</li>
+<li>Normalizar fornecedores, localizações, datas, unidades e números CAS.</li>
+<li>Tratar as linhas “Não encontrei” como candidatas a <code>not_found</code>, não como inventário disponível.</li>
+<li>Comparar as folhas de gases de abril e agosto de 2026 como levantamentos temporais; não importar ambas como garrafas independentes.</li>
+<li>Produzir um relatório com linhas aceites, avisos, rejeições e possíveis duplicados.</li>
+<li>Exigir aprovação humana antes de promover os dados de staging para produção.</li>
+</ol>
+<h2>7. Critérios mínimos de aceitação</h2>
+<p>O desenho da base de dados é aceitável quando:</p>
+<ul>
+<li>cada unidade física tem um identificador único e estável;</li>
+<li>cada unidade disponível aponta para laboratório, armário/unidade de armazenamento e prateleira;</li>
+<li>a pesquisa funciona por nome completo ou parcial, CAS, fabricante, referência de catálogo e laboratório;</li>
+<li>a pesquisa normal exclui unidades abatidas por predefinição;</li>
+<li>as mudanças de localização e os abates são integralmente auditáveis;</li>
+<li>datas, CAS, unidades e localizações inválidas não entram silenciosamente em produção;</li>
+<li>resultados de OCR e importações exigem confirmação;</li>
+<li>a interface web e os bots utilizam o mesmo backend e a mesma base de dados.</li>
+</ul>
+<h2>8. Fora do âmbito da primeira versão</h2>
+<ul>
+<li>controlo de consumo parcial;</li>
+<li>cálculo em tempo real da quantidade restante;</li>
+<li>posições numeradas dentro de uma prateleira;</li>
+<li>impressão obrigatória de códigos QR.</li>
+</ul>
+<p>O esquema deverá, contudo, permitir acrescentar códigos QR no futuro sem alterar os identificadores das unidades de inventário.</p>
+</body>
+</html>

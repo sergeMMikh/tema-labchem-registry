@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LabChem Registry</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202b33; background: #f3f6f7; }
+    body { max-width: 980px; margin: 2rem auto; padding: 2rem 2.5rem; background: white; line-height: 1.65; }
+    h1, h2, h3 { line-height: 1.25; color: #0d5967; margin-top: 1.6em; }
+    h1 { margin-top: 0; border-bottom: 1px solid #d9e2e5; padding-bottom: .5rem; }
+    a { color: #075bce; }
+    pre { overflow-x: auto; padding: 1rem; background: #f2f5f6; border-radius: 6px; }
+    code { font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2e5; padding: .5rem .7rem; text-align: left; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid #0d8394; color: #52646c; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 700px) { body { margin: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+<h1>LabChem Registry</h1>
+<p><strong>English</strong> · <a href="README.pt.md">Português</a></p>
+<p><a href="DATABASE_REQUIREMENTS.md">Database design requirements</a></p>
+<p>Chemical reagent registration, search, and location system for laboratories, accessible through a local-network web interface and, in future phases, through Telegram and WhatsApp bots.</p>
+<blockquote>
+<p><strong>Project status:</strong> MVP implemented with imported 2026 inventory data. OCR and messaging bots remain planned integrations.</p>
+</blockquote>
+<h2>Run locally</h2>
+<pre><code class="language-powershell">python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements-dev.txt
+python manage.py migrate
+python manage.py setup_roles
+python manage.py runserver 8766
+</code></pre>
+<p>Open <code>http://127.0.0.1:8766/</code>. The technical administration interface is available at <code>/admin/</code>. Create its first administrator with <code>python manage.py createsuperuser</code>.</p>
+<p>Local settings are loaded from <code>.env</code>. The supplied development file uses <code>DJANGO_ALLOWED_HOSTS=*</code>; copy <code>.env.example</code> when preparing another environment. Restart the Django server after changing environment variables.</p>
+<p>This Windows workstation's network service: <a href="docs/LOCAL-WEB.md">local web setup</a> · <a href="docs/LOCAL-WEB.pt.md">Português</a> · <a href="docs/LOCAL-WEB.ru.md">Русский</a>.</p>
+<p>To import or refresh an XLSX workbook:</p>
+<pre><code class="language-powershell">python manage.py import_inventory --source &quot;C:\path\to\inventory.xlsx&quot;
+python manage.py import_sds_links --source &quot;C:\path\to\inventory.xlsx&quot;
+</code></pre>
+<p>The first command imports inventory rows and is idempotent for the same workbook checksum. The second command reads hyperlinks embedded in Excel cells and associates the actual SDS URLs with imported reagents. PostgreSQL is enabled when the <code>POSTGRES_*</code> environment variables shown in <code>.env.example</code> are set; otherwise local development uses SQLite.</p>
+<h2>Telegram reagent search</h2>
+<p>Set <code>TELEGRAM_BOT_TOKEN</code> in <code>.env</code>, then start a separate worker:</p>
+<pre><code class="language-powershell">.\venv\Scripts\python.exe manage.py run_telegram_bot --check
+.\venv\Scripts\python.exe manage.py run_telegram_bot
+</code></pre>
+<p>In a private chat with the bot, send <code>/start</code>, a reagent name, CAS, formula, manufacturer, catalogue reference or barcode. Multiple matches appear as buttons with pagination; selecting one displays the available packages and their laboratory/cabinet/shelf locations. One match displays its locations immediately. Written-off, missing, pending and reserved packages are excluded. Search matches text fragments, not spelling errors. Replies use PT/EN labels.</p>
+<p>The worker uses the same Django search service and database as the website. It polls the <a href="https://core.telegram.org/bots/api#getupdates">Telegram Bot API</a>, so it needs outbound HTTPS but no public web port. Run only one worker per token. Stop it with Ctrl+C. Pagination expires after one hour or a worker restart. Empty <code>TELEGRAM_ALLOWED_USER_IDS</code> allows any Telegram user to search in private chats; groups are ignored. The bot cannot change inventory.</p>
+<p><code>SQLITE_PATH</code> in <code>.env</code> points to the existing SQLite database. SQLite has no server login/password. The optional <code>POSTGRES_*</code> settings select PostgreSQL only after real connection credentials and a data migration are provided. System environment variables take precedence over <code>.env</code>.</p>
+<h2>WhatsApp reagent search</h2>
+<p>Set the <code>WHATSAPP_*</code> and <code>META_APP_SECRET</code> variables shown in <code>.env.example</code>, then configure the Meta webhook callback to <code>WHATSAPP_WEBHOOK_URL</code> and subscribe the app to the WABA <code>messages</code> field. Incoming text supports <code>/start</code>, <code>/help</code>, <code>/search</code>, <code>/pesquisar</code>, names, CAS numbers, formulas and manufacturers. Multiple matches appear as a WhatsApp list with selection and pagination; one match shows its available packages and locations immediately. Results include the SDS link when present. <code>/pt</code>, <code>/en</code> and <code>/auto</code> control voice recognition language. Voice search uses the same local model and 30-second / 5-MB limit as Telegram. Empty <code>WHATSAPP_ALLOWED_USER_IDS</code> allows any sender; otherwise enter comma-separated phone numbers. The bot only reads inventory. Search pages expire after one hour or a webhook process restart.</p>
+<p>Security CI: <a href="docs/SECURITY-CI.md">GitLab pipeline and policy</a> · <a href="docs/SECURITY-CI.pt.md">Português</a> · <a href="docs/SECURITY-CI.ru.md">Русский</a>.</p>
+<h2>Tests and lint</h2>
+<pre><code class="language-powershell">.\venv\Scripts\python.exe -m pytest
+.\venv\Scripts\python.exe -m ruff check .
+.\venv\Scripts\python.exe -m ruff format --check .
+.\venv\Scripts\python.exe manage.py check
+</code></pre>
+<p>Pytest uses an isolated test database and generates <code>coverage.xml</code>. Coverage excludes tests and migrations, with an 85% minimum. Tests cover permissions, stock operations and rollback, forms, pages, search, invalid query parameters, and local XLSX import without network access. If port 8766 is occupied, use <code>python manage.py runserver 127.0.0.1:8767</code>.</p>
+<h2>Purpose</h2>
+<p>LabChem Registry centralizes the institution's chemical reagent inventory in a single application and database hosted on the internal network. Each container or physical unit is registered separately so that it can be found by its identity and storage location.</p>
+<h2>Planned features</h2>
+<ul>
+<li>Search by full or partial name, CAS number, manufacturer, catalogue reference, or laboratory.</li>
+<li>Physical location represented as <strong>laboratory → cabinet → shelf</strong>.</li>
+<li>Manual registration of new reagents.</li>
+<li>Registration from a label photograph, with preliminary data extraction.</li>
+<li>Mandatory review and correction of recognized data before saving.</li>
+<li>Record editing according to user permissions.</li>
+<li>Movement of reagents between storage locations.</li>
+<li>Retirement of consumed or unavailable units without deleting their records.</li>
+<li>Photo-based identification of an existing record before retirement.</li>
+<li>Audit history for relevant operations.</li>
+<li>Web, Telegram, and WhatsApp access through one shared backend.</li>
+</ul>
+<p>The system does not track partial consumption or the remaining quantity in a container.</p>
+<h2>Reagent record</h2>
+<p>Each physical unit will have its own record containing:</p>
+<ul>
+<li>name;</li>
+<li>CAS number, when available;</li>
+<li>manufacturer;</li>
+<li>catalogue reference or product number, when available;</li>
+<li>concentration, purity, or grade, when applicable;</li>
+<li>laboratory, cabinet, and shelf;</li>
+<li>label photograph;</li>
+<li>status;</li>
+<li>optional notes.</li>
+</ul>
+<p>Required fields will be limited to the information needed to identify and locate the reagent.</p>
+<h2>Essential rules</h2>
+<ul>
+<li>Standard search results include available reagents only.</li>
+<li>Label recognition never creates a final record without human confirmation.</li>
+<li>During retirement, recognition searches for an existing unit rather than creating a new one.</li>
+<li>Retirement changes the unit's status while preserving its record and history.</li>
+<li>Database-changing operations are attributed to the responsible user.</li>
+</ul>
+<h2>Users and permissions</h2>
+<p>Three initial roles are planned:</p>
+<ul>
+<li><strong>User:</strong> search and permitted day-to-day operations.</li>
+<li><strong>Laboratory manager:</strong> management of reagents and locations under their responsibility.</li>
+<li><strong>Administrator:</strong> management of users, laboratories, and location reference data.</li>
+</ul>
+<p>The final permission matrix will be defined during the design phase.</p>
+<h2>Planned architecture</h2>
+<pre><code class="language-text">Web interface ─┐
+Telegram bot ──┼── Shared API/backend ── PostgreSQL on the internal network
+WhatsApp bot ──┘          │
+                          ├── label recognition
+                          ├── authentication and authorization
+                          └── operation history
+</code></pre>
+<p>The primary database must remain within the institution's internal infrastructure. Only the communication required by the Telegram and WhatsApp services will leave the internal network.</p>
+<h2>Proposed delivery phases</h2>
+<ol>
+<li>Design the data model, API, users, and location hierarchy.</li>
+<li>Implement the local database and backend.</li>
+<li>Develop the local-network web interface.</li>
+<li>Integrate the Telegram bot.</li>
+<li>Implement photo-based label recognition.</li>
+<li>Integrate the WhatsApp bot.</li>
+<li>Test in real laboratory conditions, refine workflows, and deploy.</li>
+</ol>
+<p>The architecture should support future internal identifiers and QR codes, although they are not mandatory for the first release.</p>
+<h2>Local Telegram voice search (English / Portuguese)</h2>
+<p>One-time installation in the activated virtual environment:</p>
+<pre><code class="language-powershell">pip install -r requirements-voice.txt
+python manage.py setup_voice
+</code></pre>
+<p>Set <code>TELEGRAM_VOICE_ENABLED=1</code> and <code>TELEGRAM_VOICE_MODEL=models/whisper-small</code> in <code>.env</code>,
+then restart <code>python manage.py run_telegram_bot</code> (only one worker per token).
+Send a voice message of up to 30 seconds / 5 MB in a private chat.
+The bot displays the transcript, searches existing synonyms and shows matching reagents
+and their locations. Say the reagent name, without a full question.
+Use <code>/pt</code> or <code>/en</code> for short names; <code>/auto</code> restores language detection (default).
+The language preference resets when the worker restarts.</p>
+<p>Speech recognition uses a local multilingual faster-whisper model on CPU, not an external
+transcription API. The initial model download needs internet; inference does not.
+Telegram itself still requires internet and receives your voice messages. Audio is decoded
+in memory, not saved to the database or disk. Text search does not use an LLM.
+If recognition fails, send text; always check the displayed chemical name and CAS.
+Voice processing is sequential and can delay other requests while a clip is processed.
+The optional voice tests require <code>requirements-voice.txt</code>; run <code>pytest</code> and <code>ruff check .</code>.</p>
+<h2>License status</h2>
+<p>No license has been defined yet.</p>
+</body>
+</html>
