@@ -37,3 +37,7 @@
 ## Interface change delivery
 
 - After making application interface changes, create a git commit, push it to the configured remote, and restart the application. Confirm that the restart succeeded.
+
+## Documentation formats
+
+- Whenever a project documentation `.md` file is created or updated, create or update a matching `.html` file in the same directory with the same basename. The HTML file must contain the same documentation content, rendered as HTML, and stay synchronized with the Markdown version.
