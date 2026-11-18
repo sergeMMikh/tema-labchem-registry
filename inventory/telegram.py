@@ -1,4 +1,4 @@
-"""Telegram transport and read-only conversations backed by the Django inventory."""
+"""Telegram inventory search and confirmed photo registration."""
 
 import json
 import re
@@ -10,6 +10,14 @@ from django.conf import settings
 from django.core import signing
 from django.core.cache import cache
 
+from .bot_save import (
+    cancel_save,
+    pending_save,
+    save_name,
+    save_photo_reagent,
+    start_save,
+    storage_locations,
+)
 from .photo_lookup import (
     MAX_PHOTO_BYTES,
     PhotoLookupError,
@@ -122,7 +130,7 @@ class ReagentBot:
             self.selection(chat_id, user["id"], callback.get("data", ""))
             return
         if message.get("photo"):
-            self.photo(chat_id, message["photo"])
+            self.photo(chat_id, user["id"], message["photo"])
             return
         if "voice" in message:
             self.voice(chat_id, user["id"], message["voice"])
@@ -172,7 +180,7 @@ class ReagentBot:
         self.send(chat_id, f"Ouvi / Heard: {text}")
         self.search(chat_id, user_id, text)
 
-    def photo(self, chat_id, photos):
+    def photo(self, chat_id, user_id, photos):
         selected = photos[-1]
         if selected.get("file_size", 0) > MAX_PHOTO_BYTES or not selected.get("file_id"):
             self.send(chat_id, "Foto demasiado grande / Photo too large (10 MB).")
@@ -196,6 +204,43 @@ class ReagentBot:
         external = sigma_lookup(fields)
         self.send(chat_id, "Não encontrado no inventário / Not found in inventory.\n"
                   + describe_sigma(external))
+        if not save_name(fields):
+            self.send(chat_id, "Identidade insuficiente para guardar / Need a clearer label to save.")
+            return
+        allowed = settings.TELEGRAM_SAVE_USER_IDS
+        if allowed and user_id not in allowed:
+            return
+        key = start_save("tg", f"{chat_id}:{user_id}", fields, (external or {}).get("source_url", ""))
+        self.send(
+            chat_id,
+            "Guardar este reagente? / Save this reagent?\n"
+            "A quantidade ficará por verificar / Quantity will need review.",
+            reply_markup={"inline_keyboard": [[
+                {"text": "Sim / Yes", "callback_data": f"save:{key}"},
+                {"text": "Não / No", "callback_data": f"no:{key}"},
+            ]]},
+        )
+
+    def save_locations(self, chat_id, user_id, key, page):
+        if not pending_save("tg", f"{chat_id}:{user_id}", key):
+            self.send(chat_id, "Pedido expirado / Request expired. Send the photo again.")
+            return
+        locations = storage_locations()
+        if not locations:
+            self.send(chat_id, "Sem locais disponíveis / No available locations.")
+            return
+        page = min(max(page, 0), (len(locations) - 1) // PAGE_SIZE)
+        buttons = [[{"text": loc.full_path[:65], "callback_data": f"place:{key}:{loc.pk}"}]
+                   for loc in locations[page * PAGE_SIZE:(page + 1) * PAGE_SIZE]]
+        navigation = []
+        if page:
+            navigation.append({"text": "←", "callback_data": f"loc:{key}:{page - 1}"})
+        if (page + 1) * PAGE_SIZE < len(locations):
+            navigation.append({"text": "→", "callback_data": f"loc:{key}:{page + 1}"})
+        if navigation:
+            buttons.append(navigation)
+        self.send(chat_id, "Escolha a localização / Choose a location:",
+                  reply_markup={"inline_keyboard": buttons})
 
     def search(self, chat_id, user_id, text):
         if len(text) < 2 or len(text) > 200 or text.startswith("/"):
@@ -238,7 +283,32 @@ class ReagentBot:
         )
 
     def selection(self, chat_id, user_id, data):
-        if data.startswith("r:"):
+        if data.startswith(("save:", "no:", "loc:", "place:")):
+            parts = data.split(":")
+            key = parts[1] if len(parts) >= 2 else ""
+            owner = f"{chat_id}:{user_id}"
+            if not pending_save("tg", owner, key):
+                self.send(chat_id, "Pedido expirado / Request expired. Send the photo again.")
+                return
+            if parts[0] == "no" and len(parts) == 2:
+                cancel_save("tg", owner, key)
+                self.send(chat_id, "Não guardado / Not saved.")
+            elif parts[0] == "save" and len(parts) == 2:
+                self.save_locations(chat_id, user_id, key, 0)
+            elif parts[0] == "loc" and len(parts) == 3 and parts[2].isdigit():
+                self.save_locations(chat_id, user_id, key, int(parts[2][:6]))
+            elif parts[0] == "place" and len(parts) == 3:
+                result = save_photo_reagent("tg", owner, key, parts[2])
+                if result:
+                    reagent, created = result
+                    self.send(chat_id, "Guardado / Saved (pending review):" if created else
+                              "Já existe no inventário / Already in inventory:")
+                    self.locations(chat_id, reagent)
+                else:
+                    self.send(chat_id, "Local inválido ou pedido expirado / Invalid location or expired request.")
+            else:
+                self.send(chat_id, "Seleção inválida / Invalid selection.")
+        elif data.startswith("r:"):
             try:
                 reagent_id = UUID(data[2:])
             except ValueError:

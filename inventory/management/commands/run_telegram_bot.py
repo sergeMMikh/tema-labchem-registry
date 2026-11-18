@@ -8,7 +8,7 @@ from inventory.telegram import ReagentBot, TelegramClient, TelegramError
 
 
 class Command(BaseCommand):
-    help = "Run the read-only reagent search Telegram bot using long polling."
+    help = "Run the reagent search and photo registration Telegram bot using long polling."
 
     def add_arguments(self, parser):
         parser.add_argument(

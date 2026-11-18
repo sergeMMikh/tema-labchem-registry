@@ -117,6 +117,16 @@ TELEGRAM_ALLOWED_USER_IDS = {
     for value in os.environ.get("TELEGRAM_ALLOWED_USER_IDS", "").split(",")
     if value.strip()
 }
+TELEGRAM_SAVE_USER_IDS = {
+    int(value.strip())
+    for value in os.environ.get("TELEGRAM_SAVE_USER_IDS", "").split(",")
+    if value.strip()
+}
+WHATSAPP_SAVE_USER_IDS = {
+    value.lstrip("+").strip()
+    for value in os.environ.get("WHATSAPP_SAVE_USER_IDS", "").split(",")
+    if value.strip()
+}
 
 if not DEBUG:
     SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "31536000"))

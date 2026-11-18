@@ -1,4 +1,4 @@
-"""WhatsApp Cloud API transport and read-only reagent search conversations."""
+"""WhatsApp Cloud API search and confirmed photo registration."""
 
 import json
 import re
@@ -11,6 +11,14 @@ from django.conf import settings
 from django.core import signing
 from django.core.cache import cache
 
+from .bot_save import (
+    cancel_save,
+    pending_save,
+    save_name,
+    save_photo_reagent,
+    start_save,
+    storage_locations,
+)
 from .photo_lookup import (
     MAX_PHOTO_BYTES,
     PhotoLookupError,
@@ -87,6 +95,15 @@ class WhatsAppClient:
                 },
             },
         )
+
+    def buttons(self, recipient, body, buttons):
+        return self.send(recipient, {
+            "type": "interactive",
+            "interactive": {
+                "type": "button", "body": {"text": body},
+                "action": {"buttons": [{"type": "reply", "reply": item} for item in buttons]},
+            },
+        })
 
     def download_audio(self, media_id):
         return self._download_media(media_id, MAX_VOICE_BYTES)
@@ -206,6 +223,36 @@ class WhatsAppBot:
         external = sigma_lookup(fields)
         self.client.text(sender, "Não encontrado no inventário / Not found in inventory.\n"
                          + describe_sigma(external))
+        if not save_name(fields):
+            self.client.text(sender, "Identidade insuficiente para guardar / Need a clearer label to save.")
+            return
+        allowed = settings.WHATSAPP_SAVE_USER_IDS
+        if allowed and sender not in allowed:
+            return
+        key = start_save("wa", sender, fields, (external or {}).get("source_url", ""))
+        self.client.buttons(sender, "Guardar este reagente? / Save this reagent?\n"
+                            "Quantity will need review.", [
+            {"id": f"save:{key}", "title": "Sim / Yes"},
+            {"id": f"no:{key}", "title": "Não / No"},
+        ])
+
+    def save_locations(self, sender, key, page):
+        if not pending_save("wa", sender, key):
+            self.client.text(sender, "Pedido expirado / Request expired. Send the photo again.")
+            return
+        locations = storage_locations()
+        if not locations:
+            self.client.text(sender, "Sem locais disponíveis / No available locations.")
+            return
+        page = min(max(page, 0), (len(locations) - 1) // PAGE_SIZE)
+        rows = [{"id": f"place:{key}:{loc.pk}", "title": loc.full_path[:24],
+                 "description": loc.full_path[:72]}
+                for loc in locations[page * PAGE_SIZE:(page + 1) * PAGE_SIZE]]
+        if page:
+            rows.append({"id": f"loc:{key}:{page - 1}", "title": "← Anterior"})
+        if (page + 1) * PAGE_SIZE < len(locations):
+            rows.append({"id": f"loc:{key}:{page + 1}", "title": "Próxima →"})
+        self.client.list(sender, "Escolha a localização / Choose a location:", rows)
 
     def search(self, sender, text):
         if len(text) < 2 or len(text) > 200 or text.startswith("/"):
@@ -246,7 +293,31 @@ class WhatsAppBot:
         )
 
     def selection(self, sender, data):
-        if data.startswith("r:"):
+        if data.startswith(("save:", "no:", "loc:", "place:")):
+            parts = data.split(":")
+            key = parts[1] if len(parts) >= 2 else ""
+            if not pending_save("wa", sender, key):
+                self.client.text(sender, "Pedido expirado / Request expired. Send the photo again.")
+                return
+            if parts[0] == "no" and len(parts) == 2:
+                cancel_save("wa", sender, key)
+                self.client.text(sender, "Não guardado / Not saved.")
+            elif parts[0] == "save" and len(parts) == 2:
+                self.save_locations(sender, key, 0)
+            elif parts[0] == "loc" and len(parts) == 3 and parts[2].isdigit():
+                self.save_locations(sender, key, int(parts[2][:6]))
+            elif parts[0] == "place" and len(parts) == 3:
+                result = save_photo_reagent("wa", sender, key, parts[2])
+                if result:
+                    reagent, created = result
+                    self.client.text(sender, "Guardado / Saved (pending review):" if created else
+                                     "Já existe no inventário / Already in inventory:")
+                    self.locations(sender, reagent)
+                else:
+                    self.client.text(sender, "Local inválido ou pedido expirado / Invalid location or expired request.")
+            else:
+                self.client.text(sender, "Seleção inválida / Invalid selection.")
+        elif data.startswith("r:"):
             try:
                 reagent_id = UUID(data[2:])
             except ValueError:
