@@ -6,9 +6,11 @@
 
 Sistema de registo, pesquisa e localização de reagentes químicos para laboratórios, com acesso através de uma interface web na rede local e de bots no Telegram e WhatsApp.
 
-> **Estado do projeto:** v0.0.1, MVP inicial. A pesquisa no Telegram está disponível; a integração WhatsApp é de teste e tem limitações de número de teste Meta e de janela de mensagens. O OCR continua planeado.
+> **Estado do projeto:** v0.0.1, MVP inicial. A pesquisa no Telegram está disponível; a integração WhatsApp é de teste e tem limitações de número de teste Meta e de janela de mensagens. O reconhecimento de rótulos está disponível nos dois bots; a criação automática de registos continua planeada.
 
 Âmbito do produto, capacidades e limitações dos bots e datas da origem/importação do inventário: [notas da versão v0.0.1 (English)](docs/PRODUCT-v0.0.1.md) · [Português](docs/PRODUCT-v0.0.1.pt.md) · [Русский](docs/PRODUCT-v0.0.1.ru.md).
+
+Os bots também identificam reagentes a partir de fotografias do rótulo, procurando primeiro no inventário e depois na Sigma-Aldrich se necessário: [guia de fotografias](docs/PHOTO-LOOKUP.pt.md) · [English](docs/PHOTO-LOOKUP.md) · [Русский](docs/PHOTO-LOOKUP.ru.md).
 
 ## Execução local
 

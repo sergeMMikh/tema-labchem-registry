@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fotografias de rótulos de reagentes</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202b33; background: #f3f6f7; }
+    body { max-width: 980px; margin: 2rem auto; padding: 2rem 2.5rem; background: white; line-height: 1.65; }
+    h1, h2, h3 { line-height: 1.25; color: #0d5967; margin-top: 1.6em; }
+    h1 { margin-top: 0; border-bottom: 1px solid #d9e2e5; padding-bottom: .5rem; }
+    a { color: #075bce; }
+    pre { overflow-x: auto; padding: 1rem; background: #f2f5f6; border-radius: 6px; }
+    code { font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2e5; padding: .5rem .7rem; text-align: left; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid #0d8394; color: #52646c; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 700px) { body { margin: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+<h1>Fotografias de rótulos de reagentes</h1>
+<p>Envie uma fotografia nítida do rótulo de um frasco ao bot Telegram ou WhatsApp. O bot lê o nome, número CAS, referência de catálogo e fabricante com a visão da OpenAI. Depois pesquisa o inventário TEMA. A correspondência por CAS tem prioridade, seguida da referência exata e de um nome exato sem ambiguidade. Se houver correspondência, mostra o reagente, embalagens, quantidades e localizações; não consulta o site Sigma-Aldrich.</p>
+<p>Se o reagente não existir no inventário, o bot pesquisa o catálogo de produtos Sigma-Aldrich. Quando o site responde, apresenta o título e a descrição verificados da página, além da ligação direta para a pesquisa. Se o site estiver indisponível, informa o utilizador e fornece a ligação. Um rótulo ilegível exige uma imagem mais clara; o bot não inventa números CAS ou detalhes de produto. A pesquisa não altera o inventário.</p>
+<h2>Configuração e limites</h2>
+<p>Defina <code>OPEN_AI_KEY</code> no <code>.env</code> local; <code>OPEN_AI_VISION_MODEL</code> é opcional (predefinição <code>gpt-4.1-mini</code>). Reinicie o processo Telegram e o serviço web WhatsApp após alterar o ambiente. O Telegram recebe fotografias e o WhatsApp recebe imagens através do webhook configurado. O tamanho máximo de transferência é 10 MB. As imagens são reduzidas a 1800 píxeis, convertidas para JPEG e enviadas à OpenAI para reconhecimento; não envie rótulos confidenciais se este processamento externo não for aceitável. A utilização da API OpenAI pode ter custos. As listas de utilizadores autorizados dos bots também se aplicam às fotografias. Mantêm-se as restrições do número de teste WhatsApp.</p>
+<p>As páginas Sigma-Aldrich podem estar indisponíveis ou mudar de estrutura; nesse caso é fornecida apenas a ligação, sem afirmar um resultado de catálogo verificado. A identificação depende da legibilidade do rótulo e deve ser confirmada no frasco antes de utilização em laboratório.</p>
+<p>Referências: <a href="https://platform.openai.com/docs/guides/images-vision">imagens na API OpenAI</a> · <a href="https://www.sigmaaldrich.com/PT/en/search/acetone?focus=products&amp;term=acetone&amp;type=product">catálogo Sigma-Aldrich</a>.</p>
+
+</body>
+</html>

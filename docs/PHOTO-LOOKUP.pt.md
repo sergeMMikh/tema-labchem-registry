@@ -1,0 +1,13 @@
+# Fotografias de rótulos de reagentes
+
+Envie uma fotografia nítida do rótulo de um frasco ao bot Telegram ou WhatsApp. O bot lê o nome, número CAS, referência de catálogo e fabricante com a visão da OpenAI. Depois pesquisa o inventário TEMA. A correspondência por CAS tem prioridade, seguida da referência exata e de um nome exato sem ambiguidade. Se houver correspondência, mostra o reagente, embalagens, quantidades e localizações; não consulta o site Sigma-Aldrich.
+
+Se o reagente não existir no inventário, o bot pesquisa o catálogo de produtos Sigma-Aldrich. Quando o site responde, apresenta o título e a descrição verificados da página, além da ligação direta para a pesquisa. Se o site estiver indisponível, informa o utilizador e fornece a ligação. Um rótulo ilegível exige uma imagem mais clara; o bot não inventa números CAS ou detalhes de produto. A pesquisa não altera o inventário.
+
+## Configuração e limites
+
+Defina `OPEN_AI_KEY` no `.env` local; `OPEN_AI_VISION_MODEL` é opcional (predefinição `gpt-4.1-mini`). Reinicie o processo Telegram e o serviço web WhatsApp após alterar o ambiente. O Telegram recebe fotografias e o WhatsApp recebe imagens através do webhook configurado. O tamanho máximo de transferência é 10 MB. As imagens são reduzidas a 1800 píxeis, convertidas para JPEG e enviadas à OpenAI para reconhecimento; não envie rótulos confidenciais se este processamento externo não for aceitável. A utilização da API OpenAI pode ter custos. As listas de utilizadores autorizados dos bots também se aplicam às fotografias. Mantêm-se as restrições do número de teste WhatsApp.
+
+As páginas Sigma-Aldrich podem estar indisponíveis ou mudar de estrutura; nesse caso é fornecida apenas a ligação, sem afirmar um resultado de catálogo verificado. A identificação depende da legibilidade do rótulo e deve ser confirmada no frasco antes de utilização em laboratório.
+
+Referências: [imagens na API OpenAI](https://platform.openai.com/docs/guides/images-vision) · [catálogo Sigma-Aldrich](https://www.sigmaaldrich.com/PT/en/search/acetone?focus=products&term=acetone&type=product).

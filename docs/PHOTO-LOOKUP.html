@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reagent label photos</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202b33; background: #f3f6f7; }
+    body { max-width: 980px; margin: 2rem auto; padding: 2rem 2.5rem; background: white; line-height: 1.65; }
+    h1, h2, h3 { line-height: 1.25; color: #0d5967; margin-top: 1.6em; }
+    h1 { margin-top: 0; border-bottom: 1px solid #d9e2e5; padding-bottom: .5rem; }
+    a { color: #075bce; }
+    pre { overflow-x: auto; padding: 1rem; background: #f2f5f6; border-radius: 6px; }
+    code { font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2e5; padding: .5rem .7rem; text-align: left; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid #0d8394; color: #52646c; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 700px) { body { margin: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+<h1>Reagent label photos</h1>
+<p>Send a clear photograph of a reagent bottle label to the Telegram or WhatsApp bot. The bot reads the name, CAS number, catalogue number and manufacturer using OpenAI vision. It then searches the TEMA inventory. A CAS match has priority, followed by an exact catalogue number and an unambiguous exact name. An inventory match returns the reagent, packages, quantities and locations; the Sigma-Aldrich website is not contacted.</p>
+<p>If the reagent is absent from the inventory, the bot searches the Sigma-Aldrich product catalogue. It returns the verified page title and description when the site responds, plus the direct search link. If the site is unavailable, the bot reports that and still provides the link. Unreadable labels require a clearer image; the bot does not invent missing CAS numbers or product details. The lookup never changes inventory.</p>
+<h2>Setup and limits</h2>
+<p>Set <code>OPEN_AI_KEY</code> in the local <code>.env</code>; optionally set <code>OPEN_AI_VISION_MODEL</code> (default <code>gpt-4.1-mini</code>). Restart the Telegram worker and the WhatsApp web process after changing the environment. Telegram accepts a photo message; WhatsApp accepts an image message through the configured webhook. Maximum downloaded image size is 10 MB. Images are resized to 1800 pixels, converted to JPEG and sent to OpenAI for recognition; do not send confidential labels unless this external processing is acceptable. OpenAI API usage may incur charges. Existing bot allowlists also apply to photos. The WhatsApp test-number restrictions still apply.</p>
+<p>Sigma-Aldrich pages can be unavailable or change structure; in that case the link is provided without claiming a verified catalogue result. Photo identification depends on the legibility of the label and must be checked against the bottle before laboratory use.</p>
+<p>References: <a href="https://platform.openai.com/docs/guides/images-vision">OpenAI image input</a> · <a href="https://www.sigmaaldrich.com/PT/en/search/acetone?focus=products&amp;term=acetone&amp;type=product">Sigma-Aldrich catalogue</a>.</p>
+
+</body>
+</html>

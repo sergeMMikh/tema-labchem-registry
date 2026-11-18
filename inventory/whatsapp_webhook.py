@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from django.conf import settings
 from django.core.cache import cache
+from django.db import close_old_connections
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -14,15 +15,18 @@ from django.views.decorators.http import require_http_methods
 from .whatsapp import WhatsAppBot, WhatsAppClient, WhatsAppError
 
 logger = logging.getLogger(__name__)
-audio_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="whatsapp-voice")
+media_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="whatsapp-media")
 
 
-def _process_audio(message, cache_key):
+def _process_media(message, cache_key):
     try:
+        close_old_connections()
         WhatsAppBot(WhatsAppClient()).handle(message)
     except Exception:
         cache.delete(cache_key)
-        logger.exception("WhatsApp voice processing failed for %s", message.get("id"))
+        logger.exception("WhatsApp media processing failed for %s", message.get("id"))
+    finally:
+        close_old_connections()
 
 
 @csrf_exempt
@@ -60,8 +64,8 @@ def verify_webhook(request):
                     if not cache.add(cache_key, "processing", timeout=86400):
                         continue
                     try:
-                        if message.get("type") == "audio":
-                            audio_executor.submit(_process_audio, message, cache_key)
+                        if message.get("type") in ("audio", "image"):
+                            media_executor.submit(_process_media, message, cache_key)
                         else:
                             WhatsAppBot(WhatsAppClient()).handle(message)
                     except WhatsAppError as error:

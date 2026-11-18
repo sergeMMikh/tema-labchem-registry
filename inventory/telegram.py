@@ -10,6 +10,15 @@ from django.conf import settings
 from django.core import signing
 from django.core.cache import cache
 
+from .photo_lookup import (
+    MAX_PHOTO_BYTES,
+    PhotoLookupError,
+    describe_label,
+    describe_sigma,
+    identify_label,
+    inventory_match,
+    sigma_lookup,
+)
 from .search import search_reagents
 from .voice import MAX_VOICE_BYTES, MAX_VOICE_SECONDS, VoiceError, transcribe
 
@@ -30,23 +39,29 @@ class TelegramClient:
         self._token = token
 
     def download_voice(self, file_id):
+        return self._download_file(file_id, MAX_VOICE_BYTES)
+
+    def download_photo(self, file_id):
+        return self._download_file(file_id, MAX_PHOTO_BYTES)
+
+    def _download_file(self, file_id, limit):
         file = self.call("getFile", file_id=file_id)
         path = file.get("file_path", "")
         if (
             not re.fullmatch(r"[A-Za-z0-9_/-]+\.[A-Za-z0-9]+", path)
             or ".." in path
             or path.startswith("/")
-            or file.get("file_size", 0) > MAX_VOICE_BYTES
+            or file.get("file_size", 0) > limit
         ):
             raise VoiceError("Invalid or oversized voice file")
         try:
             with urllib.request.urlopen(
                 f"https://api.telegram.org/file/bot{self._token}/{path}", timeout=40
             ) as response:
-                audio = response.read(MAX_VOICE_BYTES + 1)
+                audio = response.read(limit + 1)
         except OSError, ValueError:
             raise VoiceError("Could not download voice") from None
-        if not audio or len(audio) > MAX_VOICE_BYTES:
+        if not audio or len(audio) > limit:
             raise VoiceError("Empty or oversized voice file")
         return audio
 
@@ -106,6 +121,9 @@ class ReagentBot:
         if callback:
             self.selection(chat_id, user["id"], callback.get("data", ""))
             return
+        if message.get("photo"):
+            self.photo(chat_id, message["photo"])
+            return
         if "voice" in message:
             self.voice(chat_id, user["id"], message["voice"])
             return
@@ -120,7 +138,8 @@ class ReagentBot:
                 chat_id,
                 "TEMA Reagents\nEnvie o nome, CAS, fórmula ou fabricante.\n"
                 "Send a reagent name, CAS, formula or manufacturer.\nEx.: acetone / 67-64-1\n"
-                "Voz / Voice (PT/EN): max. 30 s. /pt /en /auto",
+                "Voz / Voice (PT/EN): max. 30 s. /pt /en /auto\n"
+                "Foto da etiqueta / Label photo: inventory first, then Sigma-Aldrich.",
             )
             return
         if command in ("/search", "/pesquisar"):
@@ -152,6 +171,31 @@ class ReagentBot:
             return
         self.send(chat_id, f"Ouvi / Heard: {text}")
         self.search(chat_id, user_id, text)
+
+    def photo(self, chat_id, photos):
+        selected = photos[-1]
+        if selected.get("file_size", 0) > MAX_PHOTO_BYTES or not selected.get("file_id"):
+            self.send(chat_id, "Foto demasiado grande / Photo too large (10 MB).")
+            return
+        try:
+            photo = self.client.download_photo(selected["file_id"])
+            fields = identify_label(photo)
+        except (PhotoLookupError, VoiceError, TelegramError):
+            self.send(chat_id, "Não consegui ler a etiqueta / Could not read the label. Send a clearer photo.")
+            return
+        description = describe_label(fields)
+        if not description:
+            self.send(chat_id, "Etiqueta ilegível / Label unreadable. Send a clearer photo.")
+            return
+        reagent = inventory_match(fields)
+        self.send(chat_id, "Etiqueta / Label:\n" + description)
+        if reagent:
+            self.send(chat_id, "Encontrado no inventário / Found in inventory:")
+            self.locations(chat_id, reagent)
+            return
+        external = sigma_lookup(fields)
+        self.send(chat_id, "Não encontrado no inventário / Not found in inventory.\n"
+                  + describe_sigma(external))
 
     def search(self, chat_id, user_id, text):
         if len(text) < 2 or len(text) > 200 or text.startswith("/"):

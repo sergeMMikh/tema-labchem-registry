@@ -25,9 +25,10 @@
 <p><a href="DATABASE_REQUIREMENTS.md">Database design requirements</a></p>
 <p>Chemical reagent registration, search, and location system for laboratories, accessible through a local-network web interface and Telegram and WhatsApp bots.</p>
 <blockquote>
-<p><strong>Project status:</strong> v0.0.1 early MVP. Telegram search is available; WhatsApp is a test integration with Meta test-number and messaging-window limits. OCR remains planned.</p>
+<p><strong>Project status:</strong> v0.0.1 early MVP. Telegram search is available; WhatsApp is a test integration with Meta test-number and messaging-window limits. Bottle-label recognition is available in both bots; automatic record creation remains planned.</p>
 </blockquote>
 <p>Product scope, bot capabilities and limitations, and inventory source/import dates: <a href="docs/PRODUCT-v0.0.1.md">v0.0.1 release notes (English)</a> · <a href="docs/PRODUCT-v0.0.1.pt.md">Português</a> · <a href="docs/PRODUCT-v0.0.1.ru.md">Русский</a>.</p>
+<p>Bots can also identify a reagent from a bottle-label photo and search the inventory first, then Sigma-Aldrich if absent: <a href="docs/PHOTO-LOOKUP.md">photo lookup guide</a> · <a href="docs/PHOTO-LOOKUP.pt.md">Português</a> · <a href="docs/PHOTO-LOOKUP.ru.md">Русский</a>.</p>
 <h2>Run locally</h2>
 <pre><code class="language-powershell">python -m venv venv
 .\venv\Scripts\Activate.ps1

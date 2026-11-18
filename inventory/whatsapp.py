@@ -11,6 +11,15 @@ from django.conf import settings
 from django.core import signing
 from django.core.cache import cache
 
+from .photo_lookup import (
+    MAX_PHOTO_BYTES,
+    PhotoLookupError,
+    describe_label,
+    describe_sigma,
+    identify_label,
+    inventory_match,
+    sigma_lookup,
+)
 from .search import search_reagents
 from .voice import MAX_VOICE_BYTES, VoiceError, transcribe
 
@@ -80,6 +89,12 @@ class WhatsAppClient:
         )
 
     def download_audio(self, media_id):
+        return self._download_media(media_id, MAX_VOICE_BYTES)
+
+    def download_image(self, media_id):
+        return self._download_media(media_id, MAX_PHOTO_BYTES)
+
+    def _download_media(self, media_id, limit):
         if not re.fullmatch(r"[0-9]{1,30}", str(media_id)):
             raise VoiceError("Invalid audio ID")
         url = f"https://graph.facebook.com/{self.version}/{media_id}"
@@ -89,7 +104,7 @@ class WhatsAppClient:
         )
         try:
             metadata = json.loads(self._open(request))
-            if int(metadata.get("file_size", 0)) > MAX_VOICE_BYTES:
+            if int(metadata.get("file_size", 0)) > limit:
                 raise VoiceError("Oversized audio")
             media_url = metadata["url"]
             parsed = urllib.parse.urlparse(media_url)
@@ -102,10 +117,10 @@ class WhatsAppClient:
             media_request = urllib.request.Request(
                 media_url, headers={"Authorization": f"Bearer {self.token}"}
             )
-            audio = self._open(media_request, MAX_VOICE_BYTES + 1)
+            audio = self._open(media_request, limit + 1)
         except (WhatsAppError, KeyError, ValueError, TypeError):
             raise VoiceError("Could not download audio") from None
-        if not audio or len(audio) > MAX_VOICE_BYTES:
+        if not audio or len(audio) > limit:
             raise VoiceError("Empty or oversized audio")
         return audio
 
@@ -127,6 +142,9 @@ class WhatsAppBot:
         if selection:
             self.selection(sender, selection)
             return
+        if message.get("type") == "image" and message.get("image", {}).get("id"):
+            self.photo(sender, message["image"]["id"])
+            return
         if message.get("type") == "audio" and message.get("audio", {}).get("id"):
             self.voice(sender, message["audio"]["id"])
             return
@@ -141,7 +159,8 @@ class WhatsAppBot:
                 sender,
                 "TEMA Reagents\nEnvie o nome, CAS, fórmula ou fabricante.\n"
                 "Send a reagent name, CAS, formula or manufacturer.\n"
-                "Ex.: acetone / 67-64-1\nVoz / Voice (PT/EN): max. 30 s. /pt /en /auto",
+                "Ex.: acetone / 67-64-1\nVoz / Voice (PT/EN): max. 30 s. /pt /en /auto\n"
+                "Foto da etiqueta / Label photo: inventory first, then Sigma-Aldrich.",
             )
             return
         if command in ("/search", "/pesquisar"):
@@ -166,6 +185,27 @@ class WhatsAppBot:
             return
         self.client.text(sender, f"Ouvi / Heard: {text}")
         self.search(sender, text)
+
+    def photo(self, sender, media_id):
+        try:
+            photo = self.client.download_image(media_id)
+            fields = identify_label(photo)
+        except (PhotoLookupError, VoiceError, WhatsAppError):
+            self.client.text(sender, "Não consegui ler a etiqueta / Could not read the label. Send a clearer photo.")
+            return
+        description = describe_label(fields)
+        if not description:
+            self.client.text(sender, "Etiqueta ilegível / Label unreadable. Send a clearer photo.")
+            return
+        reagent = inventory_match(fields)
+        self.client.text(sender, "Etiqueta / Label:\n" + description)
+        if reagent:
+            self.client.text(sender, "Encontrado no inventário / Found in inventory:")
+            self.locations(sender, reagent)
+            return
+        external = sigma_lookup(fields)
+        self.client.text(sender, "Não encontrado no inventário / Not found in inventory.\n"
+                         + describe_sigma(external))
 
     def search(self, sender, text):
         if len(text) < 2 or len(text) > 200 or text.startswith("/"):

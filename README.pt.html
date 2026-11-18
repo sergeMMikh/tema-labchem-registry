@@ -25,9 +25,10 @@
 <p><a href="DATABASE_REQUIREMENTS.pt.md">Requisitos de conceção da base de dados</a></p>
 <p>Sistema de registo, pesquisa e localização de reagentes químicos para laboratórios, com acesso através de uma interface web na rede local e de bots no Telegram e WhatsApp.</p>
 <blockquote>
-<p><strong>Estado do projeto:</strong> v0.0.1, MVP inicial. A pesquisa no Telegram está disponível; a integração WhatsApp é de teste e tem limitações de número de teste Meta e de janela de mensagens. O OCR continua planeado.</p>
+<p><strong>Estado do projeto:</strong> v0.0.1, MVP inicial. A pesquisa no Telegram está disponível; a integração WhatsApp é de teste e tem limitações de número de teste Meta e de janela de mensagens. O reconhecimento de rótulos está disponível nos dois bots; a criação automática de registos continua planeada.</p>
 </blockquote>
 <p>Âmbito do produto, capacidades e limitações dos bots e datas da origem/importação do inventário: <a href="docs/PRODUCT-v0.0.1.md">notas da versão v0.0.1 (English)</a> · <a href="docs/PRODUCT-v0.0.1.pt.md">Português</a> · <a href="docs/PRODUCT-v0.0.1.ru.md">Русский</a>.</p>
+<p>Os bots também identificam reagentes a partir de fotografias do rótulo, procurando primeiro no inventário e depois na Sigma-Aldrich se necessário: <a href="docs/PHOTO-LOOKUP.pt.md">guia de fotografias</a> · <a href="docs/PHOTO-LOOKUP.md">English</a> · <a href="docs/PHOTO-LOOKUP.ru.md">Русский</a>.</p>
 <h2>Execução local</h2>
 <pre><code class="language-powershell">python -m venv venv
 .\venv\Scripts\Activate.ps1

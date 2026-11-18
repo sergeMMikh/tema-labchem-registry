@@ -6,9 +6,11 @@
 
 Chemical reagent registration, search, and location system for laboratories, accessible through a local-network web interface and Telegram and WhatsApp bots.
 
-> **Project status:** v0.0.1 early MVP. Telegram search is available; WhatsApp is a test integration with Meta test-number and messaging-window limits. OCR remains planned.
+> **Project status:** v0.0.1 early MVP. Telegram search is available; WhatsApp is a test integration with Meta test-number and messaging-window limits. Bottle-label recognition is available in both bots; automatic record creation remains planned.
 
 Product scope, bot capabilities and limitations, and inventory source/import dates: [v0.0.1 release notes (English)](docs/PRODUCT-v0.0.1.md) · [Português](docs/PRODUCT-v0.0.1.pt.md) · [Русский](docs/PRODUCT-v0.0.1.ru.md).
+
+Bots can also identify a reagent from a bottle-label photo and search the inventory first, then Sigma-Aldrich if absent: [photo lookup guide](docs/PHOTO-LOOKUP.md) · [Português](docs/PHOTO-LOOKUP.pt.md) · [Русский](docs/PHOTO-LOOKUP.ru.md).
 
 ## Run locally
 

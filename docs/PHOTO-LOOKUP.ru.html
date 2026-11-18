@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Поиск реагента по фотографии этикетки</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202b33; background: #f3f6f7; }
+    body { max-width: 980px; margin: 2rem auto; padding: 2rem 2.5rem; background: white; line-height: 1.65; }
+    h1, h2, h3 { line-height: 1.25; color: #0d5967; margin-top: 1.6em; }
+    h1 { margin-top: 0; border-bottom: 1px solid #d9e2e5; padding-bottom: .5rem; }
+    a { color: #075bce; }
+    pre { overflow-x: auto; padding: 1rem; background: #f2f5f6; border-radius: 6px; }
+    code { font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2e5; padding: .5rem .7rem; text-align: left; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid #0d8394; color: #52646c; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 700px) { body { margin: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+<h1>Поиск реагента по фотографии этикетки</h1>
+<p>Отправьте боту Telegram или WhatsApp чёткую фотографию этикетки банки. С помощью OpenAI бот считывает название, CAS, каталожный номер и производителя, затем ищет реагент в базе TEMA. Приоритет имеют совпадение CAS, точный каталожный номер и однозначное точное название. Если запись найдена, бот показывает реагент, упаковки, количество и местонахождение; к сайту Sigma-Aldrich он не обращается.</p>
+<p>Если записи в базе нет, бот ищет продукт в каталоге Sigma-Aldrich. Когда сайт отвечает, бот показывает подтверждённые заголовок и описание страницы, а также прямую ссылку на поиск. Если сайт недоступен, бот сообщает об этом и всё равно даёт ссылку. При нечитаемой этикетке нужна более чёткая фотография; отсутствующие CAS и сведения о продукте бот не выдумывает. Поиск не меняет данные склада.</p>
+<h2>Настройка и ограничения</h2>
+<p>Задайте <code>OPEN_AI_KEY</code> в локальном <code>.env</code>; <code>OPEN_AI_VISION_MODEL</code> необязателен (по умолчанию <code>gpt-4.1-mini</code>). После изменения переменных перезапустите процесс Telegram и веб-процесс WhatsApp. Telegram принимает фото, WhatsApp — изображение через настроенный webhook. Размер загружаемого изображения — до 10 МБ. Изображение уменьшается до 1800 пикселей, преобразуется в JPEG и передаётся OpenAI для распознавания. Не отправляйте конфиденциальные этикетки, если такая внешняя обработка недопустима. Использование API OpenAI может быть платным. Списки разрешённых пользователей ботов действуют и для фотографий. Ограничения тестового номера WhatsApp сохраняются.</p>
+<p>Страницы Sigma-Aldrich могут быть недоступны или изменить структуру; тогда бот даёт ссылку, не утверждая, что результат каталога подтверждён. Качество распознавания зависит от читаемости этикетки. Перед использованием в лаборатории сверьте результат с банкой.</p>
+<p>Источники: <a href="https://platform.openai.com/docs/guides/images-vision">ввод изображений в OpenAI API</a> · <a href="https://www.sigmaaldrich.com/PT/en/search/acetone?focus=products&amp;term=acetone&amp;type=product">каталог Sigma-Aldrich</a>.</p>
+
+</body>
+</html>
