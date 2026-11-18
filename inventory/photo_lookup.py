@@ -115,7 +115,7 @@ def sigma_lookup(fields):
     result = {"url": url}
     try:
         request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(request, timeout=8) as response:
+        with urllib.request.urlopen(request, timeout=3) as response:
             page = response.read(256_000).decode("utf-8", errors="replace")
         title = re.search(r"<title[^>]*>(.*?)</title>", page, re.I | re.S)
         if title:
@@ -127,7 +127,66 @@ def sigma_lookup(fields):
             result["description"] = html.unescape(description.group(1)).strip()[:300]
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError):
         pass
+    if not result.get("description"):
+        result.update(_sigma_index_lookup(fields))
     return result
+
+
+def _sigma_index_lookup(fields):
+    """Use an indexed Sigma page when the catalogue blocks direct access."""
+    if not settings.OPEN_AI_KEY:
+        return {}
+    identity = " ".join(fields[key] for key in ("cas", "catalog_number", "name") if fields[key])
+    payload = {
+        "model": settings.OPEN_AI_SEARCH_MODEL,
+        "store": False,
+        "max_output_tokens": 180,
+        "tools": [{"type": "web_search", "filters": {"allowed_domains": ["sigmaaldrich.com"]}}],
+        "tool_choice": "required",
+        "include": ["web_search_call.action.sources"],
+        "input": (
+            f"Search only official Sigma-Aldrich product pages for {identity}. "
+            "Summarize the product name, CAS, and catalogue number only if shown on a "
+            "source page. If no matching page is found, say that. No inferred facts."
+        ),
+    }
+    request = urllib.request.Request(
+        "https://api.openai.com/v1/responses",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Authorization": f"Bearer {settings.OPEN_AI_KEY}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            data = json.load(response)
+        sources = [
+            source.get("url", "")
+            for item in data.get("output", []) if item.get("type") == "web_search_call"
+            for source in item.get("action", {}).get("sources", [])
+        ]
+        official = [url for url in sources if _official_sigma_url(url)]
+        if not official:
+            return {}
+        summary = " ".join(
+            part.get("text", "")
+            for item in data.get("output", [])
+            for part in item.get("content", []) if part.get("type") == "output_text"
+        ).strip()[:450]
+        if fields["cas"] and fields["cas"] not in summary:
+            return {}
+        if fields["catalog_number"] and fields["catalog_number"].casefold() not in summary.casefold():
+            return {}
+        return {"summary": summary, "source_url": official[0]} if summary else {}
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError, TypeError):
+        logger.warning("Sigma index search failed", exc_info=False)
+        return {}
+
+
+def _official_sigma_url(url):
+    parsed = urllib.parse.urlparse(url)
+    return parsed.scheme == "https" and parsed.hostname in (
+        "sigmaaldrich.com", "www.sigmaaldrich.com"
+    )
 
 
 def describe_label(fields):
@@ -148,7 +207,10 @@ def describe_sigma(result):
         lines.append(result["title"])
     if result.get("description"):
         lines.append(result["description"])
-    if not result.get("title") and not result.get("description"):
+    if result.get("summary"):
+        lines.append(result["summary"])
+        lines.append(result["source_url"])
+    if not any(result.get(key) for key in ("title", "description", "summary")):
         lines.append("Catalogue page unavailable; open the search link / Página indisponível; abra a pesquisa.")
     lines.append(result["url"])
     return "\n".join(lines)

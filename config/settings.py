@@ -96,6 +96,7 @@ LOGIN_URL = "admin:login"
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 OPEN_AI_KEY = os.environ.get("OPEN_AI_KEY", "")
 OPEN_AI_VISION_MODEL = os.environ.get("OPEN_AI_VISION_MODEL", "gpt-4.1-mini")
+OPEN_AI_SEARCH_MODEL = os.environ.get("OPEN_AI_SEARCH_MODEL", "gpt-5.4-mini")
 WHATSAPP_WEBHOOK_VERIFY_TOKEN = os.environ.get("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "")
 META_APP_SECRET = os.environ.get("META_APP_SECRET", "")
 WHATSAPP_ACCESS_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN", "")

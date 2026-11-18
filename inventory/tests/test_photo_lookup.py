@@ -1,11 +1,12 @@
 """Photo lookup must prefer the inventory and preserve a safe fallback."""
 
 from unittest.mock import MagicMock, patch
+from urllib.error import URLError
 
 import pytest
 
 from inventory.models import Location, Package, Reagent
-from inventory.photo_lookup import inventory_match
+from inventory.photo_lookup import _official_sigma_url, inventory_match, sigma_lookup
 from inventory.telegram import ReagentBot
 from inventory.whatsapp import WhatsAppBot
 
@@ -51,3 +52,15 @@ def test_whatsapp_photo_falls_back_to_sigma(settings):
         WhatsAppBot(client).handle({"from": "351918415948", "type": "image", "image": {"id": "123"}})
     sigma.assert_called_once()
     assert "sigmaaldrich.com" in client.text.call_args.args[1]
+
+
+def test_sigma_uses_official_index_when_direct_site_unavailable():
+    with patch("inventory.photo_lookup.urllib.request.urlopen", side_effect=URLError("offline")), patch(
+        "inventory.photo_lookup._sigma_index_lookup",
+        return_value={"summary": "Acetone CAS 67-64-1", "source_url": "https://www.sigmaaldrich.com/US/en/product/sigald/179124"},
+    ) as indexed:
+        result = sigma_lookup(FIELDS)
+    indexed.assert_called_once_with(FIELDS)
+    assert result["summary"] == "Acetone CAS 67-64-1"
+    assert _official_sigma_url(result["source_url"])
+    assert not _official_sigma_url("https://sigmaaldrich.com.evil.example/product")
