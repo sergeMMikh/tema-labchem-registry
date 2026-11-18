@@ -4,7 +4,13 @@ Send a clear photograph of a reagent bottle label to the Telegram or WhatsApp bo
 
 If the reagent is absent from the inventory, the bot searches the Sigma-Aldrich product catalogue. It returns the page title and description when the site responds, plus the direct search link. If direct access fails, an OpenAI web search limited to official Sigma-Aldrich pages attempts to find a source-backed summary. If both methods fail, the bot reports that and still provides the search link. Unreadable labels require a clearer image; the bot does not invent missing CAS numbers or product details.
 
-After a miss, the bot asks whether to save the reagent. **No** cancels without writing anything. **Yes** opens a paginated list of active storage locations; selecting a location creates the reagent and one package there. The new package is marked **Pending review**. Quantity, lot and expiry are left blank, so it does not count as available stock until a laboratory user verifies and updates it on the website. The bot stores the recognized label fields and an official Sigma source URL when available. The choice expires after one hour or a bot process restart. Repeated taps cannot create a second record from the same choice.
+After a photo search without a match, send **Add**, **Adicionar**, or **Добавь** to see the save prompt. **Yes** opens the list of active storage locations. Selecting a location creates the reagent with one package marked **Pending review**. The bot stores the recognized label fields and an official Sigma source URL when available. Quantity, lot and expiry remain blank. **No** cancels the operation.
+
+## Add a reagent by text
+
+Search by text first. If the reagent is missing from the database, the bot reports the result. Send **Add**, **Adicionar**, or **Добавь** to start a form in English, Portuguese, or Russian, respectively. Enter the name and choose a storage location. Fill in the remaining reagent and package details or reply **Skip** for each optional field you want to leave blank. Enter dates as DD/MM/YYYY.
+
+The bot shows the completed card and offers **Confirm**, **Cancel**, and **Edit**. Choose **Edit**, then choose a field by number or name. After each change the bot shows the updated card and the three choices again. **Confirm** saves the reagent and one package with the selected location and marks the package **Pending review**. The draft expires after an hour of inactivity or a restart.
 
 ## Setup and limits
 

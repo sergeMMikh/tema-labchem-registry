@@ -10,6 +10,7 @@ from django.conf import settings
 from django.core import signing
 from django.core.cache import cache
 
+from .bot_registration import NOT_FOUND, BotRegistration, clear_miss, note_miss
 from .bot_save import (
     cancel_save,
     pending_save,
@@ -152,7 +153,17 @@ class ReagentBot:
             return
         if command in ("/search", "/pesquisar"):
             text = text.partition(" ")[2].strip()
+        elif self.registration(chat_id, user["id"]).handle(text):
+            return
         self.search(chat_id, user["id"], text)
+
+    def registration(self, chat_id, user_id):
+        allowed = settings.TELEGRAM_SAVE_USER_IDS
+        return BotRegistration(
+            "tg", f"{chat_id}:{user_id}", lambda text: self.send(chat_id, text),
+            can_save=not allowed or user_id in allowed,
+            offer_photo=lambda fields, source: self.offer_photo_save(chat_id, user_id, fields, source),
+        )
 
     def voice(self, chat_id, user_id, voice):
         if not settings.TELEGRAM_VOICE_ENABLED:
@@ -197,20 +208,22 @@ class ReagentBot:
             return
         reagent = inventory_match(fields)
         self.send(chat_id, "Etiqueta / Label:\n" + description)
+        owner = f"{chat_id}:{user_id}"
         if reagent:
+            clear_miss("tg", owner)
             self.send(chat_id, "Encontrado no inventário / Found in inventory:")
             self.locations(chat_id, reagent)
             return
         external = sigma_lookup(fields)
+        note_miss("tg", owner, photo=(fields, (external or {}).get("source_url", "")))
         self.send(chat_id, "Não encontrado no inventário / Not found in inventory.\n"
                   + describe_sigma(external))
+
+    def offer_photo_save(self, chat_id, user_id, fields, source_url):
         if not save_name(fields):
             self.send(chat_id, "Identidade insuficiente para guardar / Need a clearer label to save.")
             return
-        allowed = settings.TELEGRAM_SAVE_USER_IDS
-        if allowed and user_id not in allowed:
-            return
-        key = start_save("tg", f"{chat_id}:{user_id}", fields, (external or {}).get("source_url", ""))
+        key = start_save("tg", f"{chat_id}:{user_id}", fields, source_url)
         self.send(
             chat_id,
             "Guardar este reagente? / Save this reagent?\n"
@@ -249,12 +262,18 @@ class ReagentBot:
         # The short key fits Telegram's 64-byte callback limit; scope it to the user/chat.
         key = signing.Signer(salt="telegram-search").signature(f"{chat_id}:{user_id}:{text}")[:16]
         cache.set(f"tg:{chat_id}:{user_id}:{key}", text, timeout=3600)
-        self.results(chat_id, text, key, 0)
+        self.results(chat_id, text, key, 0, owner=f"{chat_id}:{user_id}")
 
-    def results(self, chat_id, query, key, page):
+    def results(self, chat_id, query, key, page, *, owner=None):
         results = search_reagents(query, available_only=True)
         count = results.count()
+        if owner is not None:
+            clear_miss("tg", owner)
         if not count:
+            if owner is not None and not search_reagents(query).exists():
+                note_miss("tg", owner)
+                self.send(chat_id, NOT_FOUND)
+                return
             self.send(
                 chat_id, "Nenhum reagente disponível encontrado. / No available reagent found."
             )
@@ -284,6 +303,9 @@ class ReagentBot:
 
     def selection(self, chat_id, user_id, data):
         if data.startswith(("save:", "no:", "loc:", "place:")):
+            allowed = settings.TELEGRAM_SAVE_USER_IDS
+            if allowed and user_id not in allowed:
+                return
             parts = data.split(":")
             key = parts[1] if len(parts) >= 2 else ""
             owner = f"{chat_id}:{user_id}"

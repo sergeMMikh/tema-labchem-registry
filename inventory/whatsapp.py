@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core import signing
 from django.core.cache import cache
 
+from .bot_registration import NOT_FOUND, BotRegistration, clear_miss, note_miss
 from .bot_save import (
     cancel_save,
     pending_save,
@@ -182,7 +183,17 @@ class WhatsAppBot:
             return
         if command in ("/search", "/pesquisar"):
             text = text.partition(" ")[2].strip()
+        elif self.registration(sender).handle(text):
+            return
         self.search(sender, text)
+
+    def registration(self, sender):
+        allowed = settings.WHATSAPP_SAVE_USER_IDS
+        return BotRegistration(
+            "wa", sender, lambda text: self.client.text(sender, text),
+            can_save=not allowed or sender in allowed,
+            offer_photo=lambda fields, source: self.offer_photo_save(sender, fields, source),
+        )
 
     def voice(self, sender, media_id):
         if not settings.WHATSAPP_VOICE_ENABLED:
@@ -217,19 +228,20 @@ class WhatsAppBot:
         reagent = inventory_match(fields)
         self.client.text(sender, "Etiqueta / Label:\n" + description)
         if reagent:
+            clear_miss("wa", sender)
             self.client.text(sender, "Encontrado no inventário / Found in inventory:")
             self.locations(sender, reagent)
             return
         external = sigma_lookup(fields)
+        note_miss("wa", sender, photo=(fields, (external or {}).get("source_url", "")))
         self.client.text(sender, "Não encontrado no inventário / Not found in inventory.\n"
                          + describe_sigma(external))
+
+    def offer_photo_save(self, sender, fields, source_url):
         if not save_name(fields):
             self.client.text(sender, "Identidade insuficiente para guardar / Need a clearer label to save.")
             return
-        allowed = settings.WHATSAPP_SAVE_USER_IDS
-        if allowed and sender not in allowed:
-            return
-        key = start_save("wa", sender, fields, (external or {}).get("source_url", ""))
+        key = start_save("wa", sender, fields, source_url)
         self.client.buttons(sender, "Guardar este reagente? / Save this reagent?\n"
                             "Quantity will need review.", [
             {"id": f"save:{key}", "title": "Sim / Yes"},
@@ -260,12 +272,18 @@ class WhatsAppBot:
             return
         key = signing.Signer(salt="whatsapp-search").signature(f"{sender}:{text}")[:16]
         cache.set(f"wa:search:{sender}:{key}", text, timeout=3600)
-        self.results(sender, text, key, 0)
+        self.results(sender, text, key, 0, remember=True)
 
-    def results(self, sender, query, key, page):
+    def results(self, sender, query, key, page, *, remember=False):
         results = search_reagents(query, available_only=True)
         count = results.count()
+        if remember:
+            clear_miss("wa", sender)
         if not count:
+            if remember and not search_reagents(query).exists():
+                note_miss("wa", sender)
+                self.client.text(sender, NOT_FOUND)
+                return
             self.client.text(sender, "Nenhum reagente disponível encontrado. / No available reagent found.")
             return
         if count == 1:
@@ -294,6 +312,9 @@ class WhatsAppBot:
 
     def selection(self, sender, data):
         if data.startswith(("save:", "no:", "loc:", "place:")):
+            allowed = settings.WHATSAPP_SAVE_USER_IDS
+            if allowed and sender not in allowed:
+                return
             parts = data.split(":")
             key = parts[1] if len(parts) >= 2 else ""
             if not pending_save("wa", sender, key):

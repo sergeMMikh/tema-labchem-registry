@@ -81,6 +81,9 @@ def test_telegram_save_requires_yes_and_location(settings):
         bot.handle({"message": {"chat": {"id": 12, "type": "private"}, "from": {"id": 12},
                                 "photo": [{"file_id": "photo-id"}]}})
     assert Reagent.objects.count() == 0
+    assert "reply_markup" not in client.call.call_args.kwargs
+    bot.handle({"message": {"chat": {"id": 12, "type": "private"}, "from": {"id": 12},
+                            "text": "add"}})
     yes = client.call.call_args.kwargs["reply_markup"]["inline_keyboard"][0][0]["callback_data"]
     def choose(action):
         bot.handle({"callback_query": {"id": "callback-id", "data": action,
@@ -111,6 +114,8 @@ def test_whatsapp_no_cancels_save(settings):
         "inventory.whatsapp.sigma_lookup", return_value={"url": "https://www.sigmaaldrich.com/PT/en/search/67-64-1"}
     ):
         bot.handle({"from": "351918415948", "type": "image", "image": {"id": "123"}})
+    client.buttons.assert_not_called()
+    bot.handle({"from": "351918415948", "type": "text", "text": {"body": "adicionar"}})
     no = client.buttons.call_args.args[2][1]["id"]
     bot.handle({"from": "351918415948", "type": "interactive",
                 "interactive": {"button_reply": {"id": no}}})
@@ -130,6 +135,7 @@ def test_whatsapp_save_is_scoped_to_sender_and_location(settings):
         "inventory.whatsapp.sigma_lookup", return_value={"url": "https://www.sigmaaldrich.com/PT/en/search/67-64-1"}
     ):
         bot.handle({"from": "351918415948", "type": "image", "image": {"id": "123"}})
+    bot.handle({"from": "351918415948", "type": "text", "text": {"body": "добавь"}})
     yes = client.buttons.call_args.args[2][0]["id"]
     def choose(sender, action):
         bot.handle({"from": sender, "type": "interactive", "interactive": {"button_reply": {"id": action}}})
