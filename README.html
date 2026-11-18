@@ -23,10 +23,11 @@
 <h1>LabChem Registry</h1>
 <p><strong>English</strong> · <a href="README.pt.md">Português</a></p>
 <p><a href="DATABASE_REQUIREMENTS.md">Database design requirements</a></p>
-<p>Chemical reagent registration, search, and location system for laboratories, accessible through a local-network web interface and, in future phases, through Telegram and WhatsApp bots.</p>
+<p>Chemical reagent registration, search, and location system for laboratories, accessible through a local-network web interface and Telegram and WhatsApp bots.</p>
 <blockquote>
-<p><strong>Project status:</strong> MVP implemented with imported 2026 inventory data. OCR and messaging bots remain planned integrations.</p>
+<p><strong>Project status:</strong> v0.0.1 early MVP. Telegram search is available; WhatsApp is a test integration with Meta test-number and messaging-window limits. OCR remains planned.</p>
 </blockquote>
+<p>Product scope, bot capabilities and limitations, and inventory source/import dates: <a href="docs/PRODUCT-v0.0.1.md">v0.0.1 release notes (English)</a> · <a href="docs/PRODUCT-v0.0.1.pt.md">Português</a> · <a href="docs/PRODUCT-v0.0.1.ru.md">Русский</a>.</p>
 <h2>Run locally</h2>
 <pre><code class="language-powershell">python -m venv venv
 .\venv\Scripts\Activate.ps1
@@ -37,7 +38,7 @@ python manage.py runserver 8766
 </code></pre>
 <p>Open <code>http://127.0.0.1:8766/</code>. The technical administration interface is available at <code>/admin/</code>. Create its first administrator with <code>python manage.py createsuperuser</code>.</p>
 <p>Local settings are loaded from <code>.env</code>. The supplied development file uses <code>DJANGO_ALLOWED_HOSTS=*</code>; copy <code>.env.example</code> when preparing another environment. Restart the Django server after changing environment variables.</p>
-<p>This Windows workstation's network service: <a href="docs/LOCAL-WEB.md">local web setup</a> · <a href="docs/LOCAL-WEB.pt.md">Português</a> · <a href="docs/LOCAL-WEB.ru.md">Русский</a>.</p>
+<p>This Windows workstation’s network service: <a href="docs/LOCAL-WEB.md">local web setup</a> · <a href="docs/LOCAL-WEB.pt.md">Português</a> · <a href="docs/LOCAL-WEB.ru.md">Русский</a>.</p>
 <p>To import or refresh an XLSX workbook:</p>
 <pre><code class="language-powershell">python manage.py import_inventory --source &quot;C:\path\to\inventory.xlsx&quot;
 python manage.py import_sds_links --source &quot;C:\path\to\inventory.xlsx&quot;
@@ -62,7 +63,7 @@ python manage.py import_sds_links --source &quot;C:\path\to\inventory.xlsx&quot;
 </code></pre>
 <p>Pytest uses an isolated test database and generates <code>coverage.xml</code>. Coverage excludes tests and migrations, with an 85% minimum. Tests cover permissions, stock operations and rollback, forms, pages, search, invalid query parameters, and local XLSX import without network access. If port 8766 is occupied, use <code>python manage.py runserver 127.0.0.1:8767</code>.</p>
 <h2>Purpose</h2>
-<p>LabChem Registry centralizes the institution's chemical reagent inventory in a single application and database hosted on the internal network. Each container or physical unit is registered separately so that it can be found by its identity and storage location.</p>
+<p>LabChem Registry centralizes the institution’s chemical reagent inventory in a single application and database hosted on the internal network. Each container or physical unit is registered separately so that it can be found by its identity and storage location.</p>
 <h2>Planned features</h2>
 <ul>
 <li>Search by full or partial name, CAS number, manufacturer, catalogue reference, or laboratory.</li>
@@ -97,7 +98,7 @@ python manage.py import_sds_links --source &quot;C:\path\to\inventory.xlsx&quot;
 <li>Standard search results include available reagents only.</li>
 <li>Label recognition never creates a final record without human confirmation.</li>
 <li>During retirement, recognition searches for an existing unit rather than creating a new one.</li>
-<li>Retirement changes the unit's status while preserving its record and history.</li>
+<li>Retirement changes the unit’s status while preserving its record and history.</li>
 <li>Database-changing operations are attributed to the responsible user.</li>
 </ul>
 <h2>Users and permissions</h2>
@@ -116,7 +117,7 @@ WhatsApp bot ──┘          │
                           ├── authentication and authorization
                           └── operation history
 </code></pre>
-<p>The primary database must remain within the institution's internal infrastructure. Only the communication required by the Telegram and WhatsApp services will leave the internal network.</p>
+<p>The primary database must remain within the institution’s internal infrastructure. Only the communication required by the Telegram and WhatsApp services will leave the internal network.</p>
 <h2>Proposed delivery phases</h2>
 <ol>
 <li>Design the data model, API, users, and location hierarchy.</li>
@@ -149,5 +150,6 @@ Voice processing is sequential and can delay other requests while a clip is proc
 The optional voice tests require <code>requirements-voice.txt</code>; run <code>pytest</code> and <code>ruff check .</code>.</p>
 <h2>License status</h2>
 <p>No license has been defined yet.</p>
+
 </body>
 </html>

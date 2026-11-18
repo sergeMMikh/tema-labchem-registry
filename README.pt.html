@@ -23,10 +23,11 @@
 <h1>LabChem Registry</h1>
 <p><a href="README.md">English</a> · <strong>Português</strong></p>
 <p><a href="DATABASE_REQUIREMENTS.pt.md">Requisitos de conceção da base de dados</a></p>
-<p>Sistema de registo, pesquisa e localização de reagentes químicos para laboratórios, com acesso através de uma interface web na rede local e, futuramente, através de bots no Telegram e WhatsApp.</p>
+<p>Sistema de registo, pesquisa e localização de reagentes químicos para laboratórios, com acesso através de uma interface web na rede local e de bots no Telegram e WhatsApp.</p>
 <blockquote>
-<p><strong>Estado do projeto:</strong> MVP implementado com os dados do inventário de 2026 importados. O OCR e os bots continuam previstos para fases posteriores.</p>
+<p><strong>Estado do projeto:</strong> v0.0.1, MVP inicial. A pesquisa no Telegram está disponível; a integração WhatsApp é de teste e tem limitações de número de teste Meta e de janela de mensagens. O OCR continua planeado.</p>
 </blockquote>
+<p>Âmbito do produto, capacidades e limitações dos bots e datas da origem/importação do inventário: <a href="docs/PRODUCT-v0.0.1.md">notas da versão v0.0.1 (English)</a> · <a href="docs/PRODUCT-v0.0.1.pt.md">Português</a> · <a href="docs/PRODUCT-v0.0.1.ru.md">Русский</a>.</p>
 <h2>Execução local</h2>
 <pre><code class="language-powershell">python -m venv venv
 .\venv\Scripts\Activate.ps1
@@ -149,5 +150,6 @@ O processamento de voz é sequencial e pode atrasar outras pesquisas durante a t
 Os testes de voz requerem <code>requirements-voice.txt</code>; execute <code>pytest</code> e <code>ruff check .</code>.</p>
 <h2>Estado da licença</h2>
 <p>Ainda não foi definida uma licença.</p>
+
 </body>
 </html>

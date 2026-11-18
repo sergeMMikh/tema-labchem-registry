@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LabChem Registry v0.0.1</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202b33; background: #f3f6f7; }
+    body { max-width: 980px; margin: 2rem auto; padding: 2rem 2.5rem; background: white; line-height: 1.65; }
+    h1, h2, h3 { line-height: 1.25; color: #0d5967; margin-top: 1.6em; }
+    h1 { margin-top: 0; border-bottom: 1px solid #d9e2e5; padding-bottom: .5rem; }
+    a { color: #075bce; }
+    pre { overflow-x: auto; padding: 1rem; background: #f2f5f6; border-radius: 6px; }
+    code { font-family: ui-monospace, monospace; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2e5; padding: .5rem .7rem; text-align: left; }
+    blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid #0d8394; color: #52646c; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 700px) { body { margin: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+<h1>LabChem Registry v0.0.1</h1>
+<p><strong>Release date:</strong> 18 November 2026<br>
+<strong>Status:</strong> early MVP for internal inventory use</p>
+<p>LabChem Registry is a Django application for locating and managing laboratory reagent stock. It stores reagent details separately from physical packages and their locations.</p>
+<h2>Current functionality</h2>
+<ul>
+<li>Search inventory by reagent name, formula, CAS number, supplier, catalogue number, or barcode. Filter by laboratory, source worksheet, location, and stock status; sort and paginate results.</li>
+<li>View reagent details, individual packages, available quantities, locations, expiry dates, SDS links, and stock movement history.</li>
+<li>Add a reagent and package; record package use, move a package, or write it off. Operations that change stock are recorded in the movement history and require the relevant Django permission.</li>
+<li>Browse the location tree, dashboard counts, and an attention list for low stock, pending or missing packages, missing locations or SDS links, and expiry dates within 90 days.</li>
+<li>Export inventory to XLSX and access a read-only JSON list at <code>/api/v1/reagents/</code> (up to 100 results per request).</li>
+<li>Manage users and permissions through Django administration. The configured groups are Viewer, Laboratory user, and Administrator.</li>
+</ul>
+<p>The website, bots, and API use the same Django data store. The default local setup uses SQLite; PostgreSQL can be configured separately. This release does not include label OCR or automatic creation of records from photographs.</p>
+<h2>Telegram bot</h2>
+<p>The Telegram bot is a read-only search interface backed by the same inventory. In private chats it accepts names, formulas, CAS numbers, suppliers, catalogue references, and barcodes. It shows available packages and locations, SDS links, and paginated buttons for multiple results. Groups are ignored. An optional Telegram user allowlist is supported.</p>
+<p>Voice search is optional and requires the local speech model to be installed and enabled. English and Portuguese are supported; clips are limited to 30 seconds and 5 MB. Search pages expire after one hour or a worker restart. Run one long-polling worker per bot token.</p>
+<h2>WhatsApp bot — test version</h2>
+<p>The WhatsApp integration uses Meta WhatsApp Cloud API with the Meta development app’s test phone number. It replies to incoming text and audio messages, searches available inventory, and uses interactive lists for multi-result selection. It does not change inventory and does not send campaigns or start conversations on its own. Only recipient numbers added and verified for the Meta test setup can be used; production availability requires completing Meta’s production onboarding and configuring a production number and credentials. Meta’s API also restricts free-form replies to its customer-service messaging window; approved templates are required for business-initiated messages outside that window. See Meta’s <a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/overview">Cloud API overview</a> and <a href="https://developers.facebook.com/docs/whatsapp/api/messages/message-templates/">template documentation</a>.</p>
+<p>The webhook must be reachable by Meta and configured with the matching verification token and app secret. Incoming webhook signatures are checked and duplicate message IDs are ignored. Voice search is optional: it requires the local model, accepts English or Portuguese, and limits audio to 30 seconds and 5 MB. Text searches accept 2–200 characters; result pages expire after one hour or a webhook restart. The optional sender allowlist can restrict access further.</p>
+<h2>Inventory source and date</h2>
+<p>The imported inventory came from the SharePoint workbook <strong><code>2026 Todos labs TEMA.xlsx</code></strong>. The source workbook was recorded as accessed on <strong>21 September 2026</strong> in the database requirements. The current database import batch is dated <strong>16 November 2026 at 15:19 (Europe/Lisbon)</strong> and records 1,225 imported rows and 69 skipped rows. The workbook contains an August 2026 gas-inventory sheet; the older April 2026 gas snapshot and a print-only vapour-cabinet sheet are excluded by the importer.</p>
+<p>The original source workbook is not stored in this repository. <code>inventory/data/inventory_export_template.xlsx</code> is the local XLSX export template, not the source workbook. The database records the source filename, import time, checksum, and row counts. It does not record a separate workbook publication or last-modified date, so the source access date and database import date above are distinct facts.</p>
+<p>The Git release identifier is <code>v0.0.1</code>.</p>
+
+</body>
+</html>

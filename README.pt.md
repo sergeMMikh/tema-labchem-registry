@@ -4,9 +4,11 @@
 
 [Requisitos de conceção da base de dados](DATABASE_REQUIREMENTS.pt.md)
 
-Sistema de registo, pesquisa e localização de reagentes químicos para laboratórios, com acesso através de uma interface web na rede local e, futuramente, através de bots no Telegram e WhatsApp.
+Sistema de registo, pesquisa e localização de reagentes químicos para laboratórios, com acesso através de uma interface web na rede local e de bots no Telegram e WhatsApp.
 
-> **Estado do projeto:** MVP implementado com os dados do inventário de 2026 importados. O OCR e os bots continuam previstos para fases posteriores.
+> **Estado do projeto:** v0.0.1, MVP inicial. A pesquisa no Telegram está disponível; a integração WhatsApp é de teste e tem limitações de número de teste Meta e de janela de mensagens. O OCR continua planeado.
+
+Âmbito do produto, capacidades e limitações dos bots e datas da origem/importação do inventário: [notas da versão v0.0.1 (English)](docs/PRODUCT-v0.0.1.md) · [Português](docs/PRODUCT-v0.0.1.pt.md) · [Русский](docs/PRODUCT-v0.0.1.ru.md).
 
 ## Execução local
 

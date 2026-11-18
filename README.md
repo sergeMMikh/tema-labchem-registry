@@ -4,9 +4,11 @@
 
 [Database design requirements](DATABASE_REQUIREMENTS.md)
 
-Chemical reagent registration, search, and location system for laboratories, accessible through a local-network web interface and, in future phases, through Telegram and WhatsApp bots.
+Chemical reagent registration, search, and location system for laboratories, accessible through a local-network web interface and Telegram and WhatsApp bots.
 
-> **Project status:** MVP implemented with imported 2026 inventory data. OCR and messaging bots remain planned integrations.
+> **Project status:** v0.0.1 early MVP. Telegram search is available; WhatsApp is a test integration with Meta test-number and messaging-window limits. OCR remains planned.
+
+Product scope, bot capabilities and limitations, and inventory source/import dates: [v0.0.1 release notes (English)](docs/PRODUCT-v0.0.1.md) · [Português](docs/PRODUCT-v0.0.1.pt.md) · [Русский](docs/PRODUCT-v0.0.1.ru.md).
 
 ## Run locally
 
